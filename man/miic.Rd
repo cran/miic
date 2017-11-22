@@ -194,11 +194,13 @@ confidenceShuffle = 10, confidenceThreshold = 0.001)
 
 # plot graph
 miic.plot(miic.res)
+\dontrun{
 
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
-miic.write.network.cytoscape(g = miic.res, file=paste(tempdir(),"/temp",sep=""))
-\dontrun{
+
+miic.write.network.cytoscape(g = miic.res, file.path(tempdir(),"/temp"))
+
 # EXAMPLE CANCER
 data(cosmicCancer)
 data(cosmicCancer_stateOrder)
@@ -211,7 +213,7 @@ miic.plot(miic.res, igraphLayout=igraph::layout_on_grid)
 
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
-miic.write.network.cytoscape(g = miic.res, file = paste(tempdir(),"/temp",sep=""))
+miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(),"/temp"))
 
 # EXAMPLE OHNOLOGS
 data(ohno)
@@ -225,7 +227,7 @@ miic.plot(miic.res)
 
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
-miic.write.network.cytoscape(g = miic.res, file = paste(tempdir(),"/temp",sep=""))
+miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(),"/temp"))
 }
 }
 \references{

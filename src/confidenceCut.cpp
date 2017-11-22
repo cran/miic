@@ -186,7 +186,10 @@ vector< vector <string> > confidenceCut(Environment& environment){
 	}
 
 	//delete from vector
+	for(int i = 0 ; i < environment.numNoMore; i++)
+		delete environment.noMoreAddress[i];
 	environment.noMoreAddress.clear();
+	
 	for(int i = 0; i < environment.numNoMore; i++){
 		if(!(std::find(toDelete.begin(), toDelete.end(), i) != toDelete.end())) {
 			int X = inferredEdges_tab[i][0] ;
@@ -197,7 +200,7 @@ vector< vector <string> > confidenceCut(Environment& environment){
 			environment.noMoreAddress.push_back(s);
 		}
 	}
-
+	environment.numNoMore = environment.noMoreAddress.size();
 
 	//////////////////////////////////////////////// copy data back
 	for(int i=0; i<environment.numSamples; i++)
@@ -219,16 +222,15 @@ vector< vector <string> > confidenceCut(Environment& environment){
 	environment.numNoMore = environment.noMoreAddress.size();
 
 
-	delete ptrVarIdx;
+	delete [] ptrVarIdx;
 
 	for(int i=0; i<environment.numSamples; i++)
-		delete safe_state[i];
-	delete safe_state;
+		delete [] safe_state[i];
+	delete [] safe_state;
 
+	delete [] lookup;
 
-	delete lookup;
-
-	delete nodes_toShf;
+	delete [] nodes_toShf;
 
 	vector< vector <string> > confVect1;
 	vector <string> v;
@@ -244,10 +246,10 @@ vector< vector <string> > confidenceCut(Environment& environment){
 		confVect1.push_back(v);
 	}
 	for(int i=0; i < noMore; i++)
-		delete inferredEdges_tab[i];
+		delete [] inferredEdges_tab[i];
 
-	delete inferredEdges_tab;
-	delete confVect;
+	delete [] inferredEdges_tab;
+	delete [] confVect;
 
 	return confVect1;
 }

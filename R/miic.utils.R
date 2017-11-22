@@ -1,7 +1,7 @@
 isContinuous <- function(tmpArray){
 	nbLevels = unique(tmpArray)
 	nbSamples = length(tmpArray)
-	if(length(nbLevels) >= 0.8 * nbSamples | length(nbLevels) >= 100 ){ print(paste("LINE CONTINUOUS LIKE: ", nbLevels));return(1) }
+	if(length(nbLevels) >= 0.8 * nbSamples | length(nbLevels) >= 100 ){ print(paste("VARIABLE CONTINUOUS LIKE:", length(nbLevels), "different levels"));return(1) }
 	else{ return(0) }
 }
 
@@ -17,7 +17,7 @@ checkInput <- function(dataFile, method){
 	}
 	else
 	{
-  		isCnt_test = sum(apply( dataFile[-1,],2,isContinuous ))
+  		isCnt_test = sum(apply( dataFile,2,isContinuous ))
   		   
 		if (method == "miic" & length(unique(dataFile[1,])) != ncol(dataFile)) { errCode = "117"}
 		else if (method == "miic" & isCnt_test > 0.1*ncol(dataFile) & isContinuousArg == 0) { errCode = "118" }

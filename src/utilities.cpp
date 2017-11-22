@@ -26,6 +26,11 @@ class sort_indices
      bool operator()(int i, int j) const { return mparr[i]<mparr[j]; }
 };
 
+
+
+
+
+
 // sort the indexed array brr using the array a
 void sort2arrays(int len, int a[], int brr[], int bridge[]){
     int i;
@@ -86,7 +91,6 @@ void createMemorySpace(Environment& environment, MemorySpace& m){
 	m.Nxui = (int *)calloc((bin_max+1), sizeof(int));
 	m.Nx = (int *)calloc((bin_max+1), sizeof(int));
 
-	// m.a_index = (int *)calloc(sampleSize+2, sizeof(int));
 	m.bridge = (int *)calloc(sampleSize+2, sizeof(int));
 }
 
@@ -127,6 +131,38 @@ void createMemorySpaceThreads(Environment& environment, ContainerMemory& m){
 	m.bridge = (int *)calloc(sampleSize+2, sizeof(int));
 }
 
+void deleteMemorySpaceThreads(Environment& environment, ContainerMemory& m){
+
+	int maxLevel = 0;
+	for(int i =0; i<environment.numNodes; i++)
+		if(environment.allLevels[i] > maxLevel)
+			maxLevel = environment.allLevels[i];
+
+	int nrow=environment.numSamples+1;
+	int bin_max=maxLevel;
+	int iii;
+
+
+	for(iii = 0; iii < nrow; iii++) 
+	 	free(m.sortedSample[iii]);
+	free(m.sortedSample);
+
+	
+	for(iii = 0; iii < bin_max+1; iii++) 
+		free(m.Nxuiz[iii]);
+	free(m.Nxuiz);
+
+	free(m.Nxyuiz);
+	free(m.Nyuiz);
+	free(m.Nuiz);
+	free(m.Nz);
+
+	free(m.Ny);
+	free(m.Nxui);
+	free(m.Nx);
+	free(m.bridge);
+}
+
 
 
 void deleteMemorySpace(Environment& environment, MemorySpace& m){
@@ -137,8 +173,6 @@ void deleteMemorySpace(Environment& environment, MemorySpace& m){
 			maxLevel = environment.allLevels[i];
 
 	int nrow=environment.numSamples+1;
-	int sampleSize = environment.numSamples;
-	int ncol=7;
 	int bin_max=maxLevel;
 	int i;
 
@@ -154,6 +188,10 @@ void deleteMemorySpace(Environment& environment, MemorySpace& m){
 		free(m.Nxuiz[i]);
 	free(m.Nxuiz);
 
+	for(i=0; i<bin_max+1;i++)
+		free(m.Opt_sortedSample[i]);
+	free(m.Opt_sortedSample);
+
 	free(m.orderSample);
 	free(m.sampleKey);
 
@@ -167,6 +205,41 @@ void deleteMemorySpace(Environment& environment, MemorySpace& m){
 	free(m.Nx);
 	free(m.bridge);
 }
+
+
+
+
+void deleteStruct(Environment& environment){
+
+	for(int i = 0 ; i < environment.numNoMore; i++)
+		delete environment.noMoreAddress[i];
+
+
+	delete [] environment.oneLineMatrix;
+	delete [] environment.allLevels;
+	for(int i = 0; i < environment.numSamples; i++){
+		delete [] environment.dataNumeric[i];
+	}
+	delete [] environment.dataNumeric;
+	delete [] environment.c2terms;
+	delete [] environment.nodes;
+
+
+	for(int i = 0; i < environment.numNodes - 1; i++){
+		for(int j = i + 1; j < environment.numNodes; j++){
+			delete environment.edges[i][j].edgeStructure;
+		}
+	}
+
+
+	for(int i = 0; i < environment.numNodes; i++){
+		delete [] environment.edges[i];
+	}
+	delete [] environment.edges;
+}
+
+
+
 
 bool SortFunctionNoMore1(const XJAddress* a, const XJAddress* b, Environment& environment) {
 	 return environment.edges[a->i][a->j].edgeStructure->Ixy_ui > environment.edges[b->i][b->j].edgeStructure->Ixy_ui;
@@ -232,32 +305,38 @@ class sorter {
 
 
 
-void readTime(string name, ExecutionTime& execTime){
-	const char * c = name.c_str();
-	ifstream input (c);
-	string lineData;
-	string s;
-	int row = 0;
-	int col = 0;
-	while(getline(input, lineData))
-	{
-		if(row == 1){
-		istringstream f(lineData);
-			while (getline(f, s, '\t')) {
-				if(col == 0)
-					execTime.init = atof(s.c_str());
-				else if(col == 1)
-					execTime.iter = atof(s.c_str());
-				else if(col == 2)
-					execTime.initIter = atof(s.c_str());
-				else if(col == 3)
-					execTime.initIterSave = atof(s.c_str());
-				col++;
-			}
-		}
-		row++;
-	}
-}
+// bool readTime(Environment& environment, string name){
+// 	const char * c = name.c_str();
+// 	ifstream input (c);
+// 	string lineData;
+// 	string s;
+// 	int row = 0;
+// 	int col = 0;
+// 	while(getline(input, lineData))
+// 	{
+// 		if(row == 1){
+// 		istringstream f(lineData);
+// 			while (getline(f, s, '\t')) {
+// 				if(col == 0)
+// 					environment.execTime.init = atof(s.c_str());
+// 				else if(col == 1)
+// 					environment.execTime.iter = atof(s.c_str());
+// 				else if(col == 2)
+// 					environment.execTime.initIter = atof(s.c_str());
+// 				else if(col == 3)
+// 					environment.execTime.ort = atof(s.c_str());
+// 				else if(col == 4)
+// 					environment.execTime.cut = atof(s.c_str());
+// 				else if(col == 5)
+// 					environment.execTime.ort_after_cut = atof(s.c_str());
+// 				else if(col == 6)
+// 					environment.execTime.total = atof(s.c_str());
+// 				col++;
+// 			}
+// 		}
+// 		row++;
+// 	}
+// }
 
 
 vector< vector <string> > getAdjMatrix(const Environment& environment){
@@ -345,8 +424,6 @@ vector< vector <string> > saveEdgesListAsTable1(Environment& environment){
 
 	vector< vector <string> > data;
 
-	bool sortedPrint = true;
-
 	vector<XJAddress*> allEdges;
 
 	for(int i = 0; i < environment.numNodes -1; i++){
@@ -416,6 +493,10 @@ vector< vector <string> > saveEdgesListAsTable1(Environment& environment){
  		data.push_back(row);
 	}
 
+	for(int i = 0; i < allEdges.size();i++){
+		delete allEdges[i];
+	}
+
 
 	return data;
 }
@@ -427,20 +508,6 @@ void copyValue(Environment& environment, int i){
 
 			environment.dataNumeric[j][i] = atof(environment.data[j][i].c_str());
 	}
-}
-
-int** copyMatrix(int**oldmatrix, int numRows, int numColumns){
-	int** newMatrix;
-	newMatrix = new int*[numRows];
-	for(int i = 0; i < numRows; i++)
-		newMatrix[i] = new int[numColumns];
-
-	for(int i = 0; i < numRows; i++){
-		for(int j = 0; j < numColumns; j++){
-			newMatrix[i][j] = oldmatrix[i][j];
-		}
-	}
-	return newMatrix;
 }
 
 bool checkNA(int** data, int numRows, int numColumns){
@@ -523,16 +590,6 @@ double findAvg(const Environment& environment, double** shuffleListNumEdges, int
 	if(environment.effN == -1)
 		environment.effN = environment.numSamples;
 
-
-	environment.dataDouble = new double*[environment.numSamples];
-
-	for(int i = 0; i < environment.numSamples; i++){
-		environment.dataDouble[i] = new double[environment.numNodes];
-		for(int j = 0; j < environment.numNodes; j++){
-			environment.dataDouble[i][j] = atof(environment.data[i][j].c_str());
-		}
-	}
-
 	return true;
 }
 
@@ -573,6 +630,8 @@ bool removeRowsAllNA(Environment& environment){
 		}
 		environment.numSamples -= pos;
 	}
+
+	delete [] indexNA;
 	return true;
 }
 /*
@@ -626,8 +685,9 @@ void setNumberLevels(Environment& environment){
  * Set the variables in the environment structure
  */
 void setEnvironment(Environment& environment){
+
 	// Load the data
-	// ----
+	// ----	
 	environment.noMoreAddress.clear();
 	environment.numNoMore = 0;
 	environment.searchMoreAddress.clear();
@@ -639,6 +699,7 @@ void setEnvironment(Environment& environment){
 	bool isNA = false;
 
 	readData(environment, isNA);
+
 
 	if(isNA){
 		//// Remove the lines that are all 'NA'
@@ -680,7 +741,7 @@ void setEnvironment(Environment& environment){
 	environment.l = (environment.numNodes*(environment.numNodes-1)/2);
 
 	// Stats test correction
-	environment.logEta = log(environment.eta);
+	environment.logEta = std::log(static_cast<double>(environment.eta));//log(environment.eta);
 
 	// create the edge structure and keep track of how many searchMore we have
 	environment.edges = new Edge*[environment.numNodes];
@@ -731,8 +792,6 @@ void readFilesAndFillStructures(vector<string> edgesVectorOneLine, Environment& 
 
 	string lineData;
 	string s;
-	int row = 0;
-	int col = 0;
 	int posX = -1;
 	int posY = -1;
 	int numCols = 10;

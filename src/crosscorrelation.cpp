@@ -92,6 +92,8 @@ int removeRowsAllNA(int numSamples, int numNodes, std::vector< std::vector <std:
 		numSamples = pos;
 	}
 
+	delete [] indexNA;
+
 	return numSamples;
 }
 
@@ -195,8 +197,8 @@ int crosscorrelation(const int row_num, const int col_num, double **configuratio
 
   neff=floor(0.5+row_num*(1-Corr[1])/(1+Corr[1]));
 
-  delete(Corr);
-  delete(meanconf);
+  delete [] Corr;
+  delete [] meanconf;
 
   return neff;
 
@@ -220,8 +222,6 @@ extern "C" SEXP evaluateEffn(SEXP inputDataR, SEXP variable_numR, SEXP sample_nu
 
 	int Neff,c_max=30;
 
-	int i, j;
-
 	double** dataNumeric = reading_input(sample_num, variable_num, vectorData, state);
 
 	//  Compute crosscorrelation C(c) and identify R:
@@ -237,5 +237,10 @@ extern "C" SEXP evaluateEffn(SEXP inputDataR, SEXP variable_numR, SEXP sample_nu
         _["neff"] = Neff
        // _["scores"] = outScore
     ) ;
+
+    for(int pos = 0; pos < sample_num; pos++)
+    	delete [] dataNumeric[pos];
+    delete [] dataNumeric;
+
     return result;
 }

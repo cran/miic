@@ -27,3 +27,5 @@ bool readBlackbox1(std::vector<std::string>, Environment&);
 std::vector< std::vector <std::string> > getAdjMatrix(const Environment&);
 bool readFileTypeData(std::vector<std::string>, Environment&);
 void sort2arrays(int len, int a[], int brr[], int bridge[]);
+void deleteStruct(Environment& environment);
+void deleteMemorySpaceThreads(Environment& environment, ContainerMemory& m);

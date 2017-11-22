@@ -1,12 +1,13 @@
 #include <stdio.h>
-#include <stdlib.h>	/*malloc*/
-#include <string.h>	/* memset*/
+#include <stdlib.h>	
+#include <string.h>	
 #include <math.h>
 #include <stdint.h>
-
+#include <cmath>
 #include "computeInfo.h"
 
 # define M_PI		3.14159265358979323846	/* pi */
+using namespace std;
 
 unsigned long binomialCoeff(int n, int k)
 {
@@ -54,7 +55,6 @@ int computeInfoAndCplx( int *myNxyui, int *myDVect, int *myLevels, int *myVarIdx
 	int Nui;		            // Sum over X and Y for a {ui}
 	int Nxui;		            // Sum over Y of Nxyui
 	int Nyui;		            // Sum over X of Nxyui
-	int Nxyui;		            // Sum over X and Y of Nxyui
 	int NN = 0;		            // Sum over {ui} of Nui
 	
 	int tmpRescaleN;            // temp variable for rescaling the 'n' considering the effective sample size
@@ -127,7 +127,7 @@ int computeInfoAndCplx( int *myNxyui, int *myDVect, int *myLevels, int *myVarIdx
 			// Add to the NI
 			if( Nxui > 0 )
 			{ 
-				NI = NI - Nxui*log(Nxui/(1.0*Nui)); 
+				NI = NI - Nxui*std::log(static_cast<double>(Nxui/(1.0*Nui)));//log(Nxui/(1.0*Nui)); 
 				//if( myCplx == 1 ) { logCNML = logCNML + computeLogC( Nxui, myLevels[myVarIdx[1]] ); }
 				if( myCplxType == 1 )
 				{ 
@@ -159,7 +159,7 @@ int computeInfoAndCplx( int *myNxyui, int *myDVect, int *myLevels, int *myVarIdx
 			// Add to the NI
 			if( Nyui > 0 )
 			{ 
-				NI = NI - Nyui*log(Nyui/((double)Nui));
+				NI = NI - Nyui*std::log(static_cast<double>(Nyui/((double)Nui)));//log(Nyui/((double)Nui));
 				//if( myCplx == 1 ) { logCNML = logCNML + computeLogC( Nyui, myLevels[myVarIdx[0]] ); }
 				if( myCplxType == 1 )
 				{
@@ -177,7 +177,7 @@ int computeInfoAndCplx( int *myNxyui, int *myDVect, int *myLevels, int *myVarIdx
 			for( j = 0; j < myLevels[myVarIdx[1]]; j++ )
 			{
 				LLxyui = Lui + i*myDVect[0] + j*myDVect[1];
-				if( myNxyui[LLxyui] > 0 ){ NI = NI + myNxyui[LLxyui]*log(myNxyui[LLxyui]/((double)Nui)); }
+				if( myNxyui[LLxyui] > 0 ){ NI = NI + myNxyui[LLxyui]*std::log(static_cast<double>(myNxyui[LLxyui]/((double)Nui)));}//log(myNxyui[LLxyui]/((double)Nui)); }
 			}
 		}	
 
@@ -207,7 +207,7 @@ int computeInfoAndCplx( int *myNxyui, int *myDVect, int *myLevels, int *myVarIdx
 	if( myCplxType == 0 ) 
 	{ 
 		// Compute the MDL
-		MDL = 0.5*( myLevels[myVarIdx[0]] - 1 )*( myLevels[myVarIdx[1]] - 1 )*log( NN );
+		MDL = 0.5*( myLevels[myVarIdx[0]] - 1 )*( myLevels[myVarIdx[1]] - 1 )*std::log(static_cast<double>(NN));//log( NN );
 		for( i = 2; i < myNbrVar; i++ )
 		{
 			MDL = MDL*myLevels[myVarIdx[i]];
@@ -251,7 +251,7 @@ double compute_rescaledLogC( int sampleSize, int sampleSizeEff, int N, int r , d
 
 	} else {
     	if(c2terms[NN] == -1){
-       		C2 = sqrt( NN * M_PI_2)*exp( sqrt( 8/( 9*NN*M_PI ) ) + ( 3*M_PI-16 )/( 36*NN*M_PI ) );
+       		C2 = pow( (NN * M_PI_2),0.5)*exp( pow(( 8/( 9*NN*M_PI ) ),0.5) + ( 3*M_PI-16 )/( 36*NN*M_PI ) );
        		c2terms[NN] = C2;
 	   	} else {
 	   		C2 = c2terms[NN];
@@ -259,14 +259,14 @@ double compute_rescaledLogC( int sampleSize, int sampleSizeEff, int N, int r , d
 	}
 
 	D=C2;
-	logC=log(D);
+	logC=std::log(static_cast<double>(D));//log(D);
 
 	if( r > 2 )
 	{
     	for( rr = 3; rr <= r; rr++)
 		{
 		  D=1+(NN/(1.0*(rr-2)*D));
-		  logC=logC+log(D);
+		  logC=logC+std::log(static_cast<double>(D));//log(D);
 		}
   	}
 
@@ -293,19 +293,19 @@ double compute_LogC_C2( int N, int r, double* c2terms)
 				C2 = C2 + binomialCoeff( NN, h )*pow( (h/((double)NN)), h )*pow( ((NN-h)/((double)NN ) ), ( NN-h ) );
 
 		} else {
-			C2 = sqrt( NN * M_PI_2)*exp( sqrt( 8/( 9*NN*M_PI ) ) + ( 3*M_PI-16 )/( 36*NN*M_PI ) );
+			C2 = pow(( NN * M_PI_2),0.5)*exp( pow(( 8/( 9*NN*M_PI ) ),0.5) + ( 3*M_PI-16 )/( 36*NN*M_PI ) );
 		}
 	  c2terms[NN] = C2;
 
 	}
 
 	D=C2;
-	logC=log(D);
+	logC=std::log(static_cast<double>(D));//log(D);
 	
 	if( r > 2 ){
 		for( rr = 3; rr <= r; rr++){
 			D=1+(NN/(1.0*(rr-2)*D));
-			logC=logC+log(D);
+			logC=logC+std::log(static_cast<double>(D));//log(D);
 		}
 	}
 	  
@@ -331,7 +331,7 @@ double computeLogC( int N, int r, double* c2terms)
 	   	}
 	} else {
     	if(c2terms[N] == -1){
-       		C2 = sqrt( N * M_PI_2)*exp( sqrt( 8/( 9*N*M_PI ) ) + ( 3*M_PI-16 )/( 36*N*M_PI ) );
+       		C2 = pow(( N * M_PI_2), 0.5)*exp( pow(( 8/( 9*N*M_PI ) ), 0.5) + ( 3*M_PI-16 )/( 36*N*M_PI ) );
        		c2terms[N] = C2;
 	   	} else {
 	   		C2 = c2terms[N];
@@ -339,14 +339,14 @@ double computeLogC( int N, int r, double* c2terms)
 	}
 
 	D=C2;
-	logC=log(D);
+	logC=std::log(static_cast<double>(D));//log(D);
 
 	if( r > 2 )
 	{
     	for( rr = 3; rr <= r; rr++)
 		{
 		  D=1+(N/(1.0*(rr-2)*D));
-		  logC=logC+log(D);
+		  logC=logC+std::log(static_cast<double>(D));//log(D);
 		}
   	}
 

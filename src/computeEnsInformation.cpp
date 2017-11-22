@@ -6,16 +6,15 @@
 #include <iostream>
 #include "utilities.h"
 #include "computeInfo_interface.h"
-
+#include <cstdlib>
 
 using namespace std;
 
 /*
 / This functions prepare all data for the call of getAllInfoNEW or getAllInfoNEWThreads and returns its result
 */
-double* computeEnsInformationNew(Environment& environment, int* myCond, int myNbrUi,  int* myZi, int myNbrZi, int myZiPos, 
+double* computeEnsInformationNew(Environment& environment, int* myCond, int myNbrUi,  int* myZi, int myNbrZi, int myZiPos,
 	const int myVarIdxX, const int myVaridxY, const int cplx){
-	bool test = false;
 
 	int* posArray = new int[2 + environment.edges[myVarIdxX][myVaridxY].edgeStructure->ui_vect_idx.size()];
 	posArray[0] = myVarIdxX;
@@ -29,7 +28,7 @@ double* computeEnsInformationNew(Environment& environment, int* myCond, int myNb
 				posArray[i+2] = myCond[i];
 		}
 	}
-	
+
 	//// Compute the mutual information
 	double* res_new;
 	if(myNbrZi>5 && myNbrUi>0 && environment.nThreads > 1){
@@ -37,17 +36,17 @@ double* computeEnsInformationNew(Environment& environment, int* myCond, int myNb
 	 	if(nthreads > environment.nThreads)
 	 		nthreads = environment.nThreads;
 
-	 	res_new = getAllInfoNEWThreads(environment.oneLineMatrix, environment.allLevels, posArray, 
-	 	myNbrUi, myZi, myNbrZi, myZiPos, environment.numSamples, environment.effN, cplx, environment.isK23, environment.c2terms, 
+	 	res_new = getAllInfoNEWThreads(environment.oneLineMatrix, environment.allLevels, posArray,
+	 	myNbrUi, myZi, myNbrZi, myZiPos, environment.numSamples, environment.effN, cplx, environment.isK23, environment.c2terms,
 	 	&environment.m, nthreads, environment.memoryThreads);
 	}
-	else{
-	 	res_new = getAllInfoNEW(environment.oneLineMatrix, environment.allLevels, posArray, 
+	else {
+	 	res_new = getAllInfoNEW(environment.oneLineMatrix, environment.allLevels, posArray,
 	 	myNbrUi, myZi, myNbrZi, myZiPos, environment.numSamples, environment.effN, cplx, environment.isK23, environment.c2terms, &environment.m);
 	}
 	int nbrRetValues = 3;
 
-	// If nbrZi > 0, return {nSample[z1]*I(..|{ui})[z1], NML(..|{ui})[z1], nSample[z1],nSample[z2]*I(..|{ui})[z2], NML(..|{ui})[z2], nSample[z2], ... } 
+	// If nbrZi > 0, return {nSample[z1]*I(..|{ui})[z1], NML(..|{ui})[z1], nSample[z1],nSample[z2]*I(..|{ui})[z2], NML(..|{ui})[z2], nSample[z2], ... }
 	if( myNbrZi > 0 )
 		 nbrRetValues = 9;
 
@@ -57,7 +56,7 @@ double* computeEnsInformationNew(Environment& environment, int* myCond, int myNb
 		}
 	}
 
-	delete posArray;
+	delete [] posArray;
 
 	return res_new;
 }
@@ -66,9 +65,8 @@ double* computeEnsInformationNew(Environment& environment, int* myCond, int myNb
 /*
  * Wrapper for the evaluation of the mutual information, multithreaded. It calls the principal function passing the correct parameters
  */
-double* computeEnsInformationNewThread(Environment& environment, int* myCond, int myNbrUi,  int* myZi, int myNbrZi, int myZiPos, 
+double* computeEnsInformationNewThread(Environment& environment, int* myCond, int myNbrUi,  int* myZi, int myNbrZi, int myZiPos,
 	const int myVarIdxX, const int myVaridxY, const int cplx, MemorySpace m){
-	bool test = false;
 
 	int* posArray = new int[2 + environment.edges[myVarIdxX][myVaridxY].edgeStructure->ui_vect_idx.size()];
 	posArray[0] = myVarIdxX;
@@ -83,12 +81,12 @@ double* computeEnsInformationNewThread(Environment& environment, int* myCond, in
 		}
 	}
 
-	double *res_new = getAllInfoNEW(environment.oneLineMatrix, environment.allLevels, posArray, 
+	double *res_new = getAllInfoNEW(environment.oneLineMatrix, environment.allLevels, posArray,
 	 	myNbrUi, myZi, myNbrZi, myZiPos, environment.numSamples, environment.effN, cplx, environment.isK23, environment.c2terms, &m);
 
 	int nbrRetValues = 3;
 
-	// If nbrZi > 0, return {nSample[z1]*I(..|{ui})[z1], NML(..|{ui})[z1], nSample[z1],nSample[z2]*I(..|{ui})[z2], NML(..|{ui})[z2], nSample[z2], ... } 
+	// If nbrZi > 0, return {nSample[z1]*I(..|{ui})[z1], NML(..|{ui})[z1], nSample[z1],nSample[z2]*I(..|{ui})[z2], NML(..|{ui})[z2], nSample[z2], ... }
 	if( myNbrZi > 0 )
 		 nbrRetValues = 9;
 
@@ -98,7 +96,7 @@ double* computeEnsInformationNewThread(Environment& environment, int* myCond, in
 		}
 	}
 
-	delete posArray;
+	delete [] posArray;
 
 	return res_new;
 }
@@ -137,9 +135,6 @@ void removeifBothPhantomAndNA(Environment& environment, vector<int>& vec, const 
  * search for the best z and find the rank
  */
 bool SearchForNewContributingNodeAndItsRank(Environment& environment, const int posX, const int posY) {
-
-	bool test=false;
-	//// --------
 
 	if(environment.edges[posX][posY].edgeStructure->zi_vect_idx.size() == 0)
 	 	return true;
@@ -185,8 +180,10 @@ bool SearchForNewContributingNodeAndItsRank(Environment& environment, const int 
 
 		environment.edges[posX][posY].edgeStructure->Rxyz_ui = vect[6];
 		environment.edges[posX][posY].edgeStructure->Nxyz_ui = vect[6];
-	} 
+	}
 
+	free(vect);
+	
 	return true;
 }
 
@@ -212,9 +209,6 @@ void* SearchForNewContributingNodeAndItsRankThread(void* container){
 		int posX = environment.searchMoreAddress[pos]->i;
 		int posY = environment.searchMoreAddress[pos]->j;
 
-		bool test=false;
-		//// --------
-
 		if(environment.edges[posX][posY].edgeStructure->zi_vect_idx.size() != 0)
 		{
 			//// If needed, remove the NA (-1) elements
@@ -228,7 +222,7 @@ void* SearchForNewContributingNodeAndItsRankThread(void* container){
 			int nbrZi = environment.edges[posX][posY].edgeStructure->zi_vect_idx.size();
 
 			if(nbrZi != 0)
-			{	
+			{
 
 				int* ui;
 				int* zi;
@@ -246,8 +240,8 @@ void* SearchForNewContributingNodeAndItsRankThread(void* container){
 				int argEnsInfo = -1;
 				if(environment.isK23 == true)
 					argEnsInfo = environment.cplx;
-				double* vect = computeEnsInformationNewThread(environment, ui, environment.edges[posX][posY].edgeStructure->ui_vect_idx.size(), zi, 
-					environment.edges[posX][posY].edgeStructure->zi_vect_idx.size(), environment.edges[posX][posY].edgeStructure->ui_vect_idx.size()+2,  
+				double* vect = computeEnsInformationNewThread(environment, ui, environment.edges[posX][posY].edgeStructure->ui_vect_idx.size(), zi,
+					environment.edges[posX][posY].edgeStructure->zi_vect_idx.size(), environment.edges[posX][posY].edgeStructure->ui_vect_idx.size()+2,
 					posX, posY, argEnsInfo, m);
 
 				//// There can be more than one zi with the same rank... so, arbitrarly take the first one
@@ -258,9 +252,9 @@ void* SearchForNewContributingNodeAndItsRankThread(void* container){
 					environment.edges[posX][posY].edgeStructure->z_name_idx = vect[3];
 					environment.edges[posX][posY].edgeStructure->Rxyz_ui = vect[6];
 					environment.edges[posX][posY].edgeStructure->Nxyz_ui = vect[3];
-				} 
-				
-				delete vect;
+				}
+
+				free(vect);
 			}
 		}
 	}

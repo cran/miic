@@ -6,6 +6,7 @@
 #include "skeletonInitialization.h"
 #include <vector>
 #include <algorithm>
+#include <cmath>
 using namespace std;
 
 
@@ -62,20 +63,18 @@ bool skeletonIteration(Environment& environment){
 		topEdgeElt->Nxy_ui = v[0];
 		topEdgeElt->cplx = v[2];
 		
-		delete(v);
+		free(v);
 		double topEdgeElt_kxy_ui = topEdgeElt->cplx;
 
 	 	if(environment.isDegeneracy)
-			topEdgeElt_kxy_ui = topEdgeElt->cplx + (topEdgeElt->ui_vect_idx.size()*log(3));
+			topEdgeElt_kxy_ui = topEdgeElt->cplx + (topEdgeElt->ui_vect_idx.size()*std::log(static_cast<double>(3)));//log(3));
 
-		//// *****	
-		int leftEdges = environment.numSearchMore + environment.numNoMore;
-		//// *****	
 
 		if( topEdgeElt->Ixy_ui - topEdgeElt_kxy_ui - environment.logEta <= 0 )
 		{   
 
 			//// Move this edge from the list searchMore to phantom
+			delete environment.searchMoreAddress[max] ;
 			environment.searchMoreAddress.erase(environment.searchMoreAddress.begin() + max);
 			environment.numSearchMore--;
 

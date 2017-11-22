@@ -187,11 +187,13 @@
 #'
 #' # plot graph
 #' miic.plot(miic.res)
+#'\dontrun{
 #'
 #' # write graph to graphml format. Note that to correctly visualize
 #' # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
-#' miic.write.network.cytoscape(g = miic.res, file=paste(tempdir(),"/temp",sep=""))
-#'\dontrun{
+#'
+#' miic.write.network.cytoscape(g = miic.res, file.path(tempdir(),"/temp"))
+#'
 #' # EXAMPLE CANCER
 #' data(cosmicCancer)
 #' data(cosmicCancer_stateOrder)
@@ -204,7 +206,7 @@
 #'
 #' # write graph to graphml format. Note that to correctly visualize
 #' # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
-#' miic.write.network.cytoscape(g = miic.res, file = paste(tempdir(),"/temp",sep=""))
+#' miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(),"/temp"))
 #'
 #' # EXAMPLE OHNOLOGS
 #' data(ohno)
@@ -218,7 +220,7 @@
 #'
 #' # write graph to graphml format. Note that to correctly visualize
 #' # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
-#' miic.write.network.cytoscape(g = miic.res, file = paste(tempdir(),"/temp",sep=""))
+#' miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(),"/temp"))
 #'}
 
 miic <- function(inputData = NULL, categoryOrder= NULL, trueEdges = NULL, blackBox = NULL, nThreads=1,
@@ -241,6 +243,17 @@ miic <- function(inputData = NULL, categoryOrder= NULL, trueEdges = NULL, blackB
 
   if( !is.data.frame(inputData))
   { stop("The input data is not a dataframe") }
+
+  effnAnalysis = miic.evaluate.effn(inputData, plot=F)
+  if(effnAnalysis$neff < 0.5 * nrow(inputData) ){
+    if(effnAnalysis$exponential_decay){
+        print(paste("Warning! Your samples in the datasets seem to be correlated! We suggest to re run the method specifying",
+          effnAnalysis$neff, " in the neff parameter. See the autocorrelation plot for more details."))
+      } else {
+        print("Warning! Your samples in the datasets seem to be correlated but the correlation decay is not exponential.
+          Are your samples correlated in some way? See the autocorrelation plot for more details.")
+      }
+  }
 
   # if(!is.null(trueEdges)){
   #   if(length(which(!c(as.vector(trueEdges[,1]), as.vector(trueEdges[,2])) %in% colnames(inputData))) > 0){
@@ -288,10 +301,13 @@ miic <- function(inputData = NULL, categoryOrder= NULL, trueEdges = NULL, blackB
     if(skeleton){
       if(verbose)
        cat("\t# -> START skeleton...\n")
-      res <- miic.skeleton(inputData = inputData, stateOrder= categoryOrder, nThreads= nThreads, cplx = cplx, latent = latent, effN = neff, blackBox = blackBox, verbose= verbose)
+      res <- miic.skeleton(inputData = inputData, stateOrder= categoryOrder, nThreads= nThreads, cplx = cplx,
+                          latent = latent, effN = neff, blackBox = blackBox,
+                          confidenceShuffle = confidenceShuffle, confidenceThreshold= confidenceThreshold, verbose= verbose)
       # print(res)
       edges = res$edges
-
+      confData = res$confData
+      time = res$time
       if(verbose)
         cat("\t# -> END skeleton...\n\t# --------\n")
     }
@@ -302,16 +318,21 @@ miic <- function(inputData = NULL, categoryOrder= NULL, trueEdges = NULL, blackB
     }
 
 
+    timeOrt=0
     if(orientation){
 
       if(verbose)
         cat("\tSTART orientation...")
-
+      ptm <- proc.time()
       res = miic.orient(inputData= inputData, method = orientationMethod, stateOrder = categoryOrder,
                           edges = edges, effN = neff,  cplx = cplx,  latent = latent, propagation = propagation,
-                          verbose = FALSE, confidenceShuffle = confidenceShuffle, confidenceThreshold= confidenceThreshold)
-      res$edges <- edges
+                          verbose = FALSE)
 
+      timeOrt=(proc.time() - ptm)["elapsed"]
+      timeInitIterOrt = time["initIter"]+timeOrt
+
+      res$edges <- edges
+      res$confData <- confData
       if(verbose)
         cat("\tEND orientation...")
     }
@@ -341,8 +362,17 @@ miic <- function(inputData = NULL, categoryOrder= NULL, trueEdges = NULL, blackB
 
     # Call the function
 
+    ptm <- proc.time()
     resGmSummary <- gmSummary(inputData = inputData, edges = res$edges,
                               adjMatrix= res$adjMatrix, trueEdges = trueEdges, stateOrder = categoryOrder, verbose = verbose)
+
+    timeInitIterOrt = timeOrt + time[4]
+    timeSum=(proc.time() - ptm)["elapsed"]
+    timeTotal = timeInitIterOrt+timeSum
+    timeVec = c(time, timeOrt, timeInitIterOrt, timeSum, timeTotal)
+    timeVec[which(timeVec==0)]=NA
+    res$time = stats::setNames(timeVec,
+                c("initailization", "iteration", "confidenceCut", "skeleton", "orientation", "skeleton+Orientation", "summary", "total"))
 
     res$all.edges.summary <- resGmSummary$all.edges.summary
     res$retained.edges.summary <- resGmSummary$retained.edges.summary

@@ -117,7 +117,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 
 	double NlogN,logN;
 
-	int Lxyuiz,Lxyui,Lyui,Lui;
+	int Lxyui,Lyui,Lui;
 	int  Nxyui,  Nyui,  Nui;
 	int  Nxyuis,  Nyuis,  Nuis;
 
@@ -162,9 +162,6 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 	double info_xui_z,info_yui_z,info_ui_z;
 	double logC_xui_z,logC_yui_z,logC_ui_z;
 
-	double test_xy_ui, info3, info2;
-
-
 	double info3xy_ui,info2xy_ui,info3xy_uiz,info2xy_uiz;
 	double info3xz_ui,info2xz_ui,info3yz_ui,info2yz_ui;
 	double logC3xy_ui,logC2xy_ui,logC3xy_uiz,logC2xy_uiz;
@@ -190,7 +187,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 	double k_xy_ui=-1.0,k_xy_ui_top,k_xy_uiz_top,k_xyz_ui_top;
 
 
-	int i, j, k, errCode = 0;	// for loops
+	int i, j, k;	// for loops
 
 	int nbrAllVar;
 	// Output pointer
@@ -232,9 +229,6 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 	Opt_dBin = (int **)malloc(nrow* sizeof(int*));
 	for(iii = 0; iii < nrow; iii++)
 	  Opt_dBin[iii] = (int *)malloc(ncol* sizeof(int));
-
-	int binX,binY;
-
 
 	// find samples without NA in x,y,ui and store their id in sample[k][0]
 	for( i = 0, k = 0; i < sampleSize; i++)
@@ -423,7 +417,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 				Ntot +=  NNxyui;
 
 				if( NNxyui > 0 ){
-				  NlogN = NNxyui * log(NNxyui);
+				  NlogN = NNxyui * std::log(static_cast<double>(NNxyui));//log(NNxyui);
 				  info_xui_y += NlogN;
 				  info_yui_x += NlogN;
 				}
@@ -439,7 +433,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 				if(sortedSample[k][2] > Lyui){
 
 				        if( Nyui > 0 ){
-					  NlogN = Nyui * log(Nyui);
+					  NlogN = Nyui * std::log(static_cast<double>(Nyui));//log(Nyui);
 					  info_yui_x -= NlogN;
 					  info_ui_y  += NlogN;
 
@@ -455,7 +449,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 						for( j = 0; j < dBin[0][0]; j++ ){
 							Nxuij=Nxui[j];
 							if( Nxuij > 0 ){
-								NlogN = Nxuij * log(Nxuij);
+								NlogN = Nxuij * std::log(static_cast<double>(Nxuij));//log(Nxuij);
 								info_xui_y -= NlogN;
 								info_ui_x  += NlogN;
 								if(modCplx != MDL){
@@ -468,7 +462,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 						}
 
 						if( Nui > 0 ){
-						  NlogN = Nui * log(Nui);
+						  NlogN = Nui * std::log(static_cast<double>(Nui));//log(Nui);
 						  info_ui_y  -= NlogN;
 						  info_ui_x  -= NlogN;
 						  if(modCplx != MDL){
@@ -494,7 +488,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 			Nxj=Nx[j];
 			if( Nxj > 0 ){
 			      //NlogN = Nxj * log(Nxj/(1.0*nSample0));
-				NlogN = Nxj * log(Nxj/(1.0*Ntot));
+				NlogN = Nxj * std::log(static_cast<double>(Nxj/(1.0*Ntot)));//log(Nxj/(1.0*Ntot));
 				info_yui_x -= NlogN;
 				info_ui_x  -= NlogN;
 				Nxs += Nxj;
@@ -504,7 +498,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 			Nyj=Ny[j];
 			if( Nyj > 0 ){
 			      //NlogN = Nyj * log(Nyj/(1.0*nSample0));
-				NlogN = Nyj * log(Nyj/(1.0*Ntot));
+				NlogN = Nyj * std::log(static_cast<double>(Nyj/(1.0*Ntot)));//log(Nyj/(1.0*Ntot));
 				info_xui_y -= NlogN;
 				info_ui_y  -= NlogN;
 				Nys += Nyj;
@@ -525,7 +519,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 			//NN=nSample0;
 			//NN = (int)floor(0.5 + ((double)nSample0*sampleSizeEff)/sampleSize);
 			//logN=log(NN);
-			logN=log(Ntot);
+			logN=std::log(static_cast<double>(Ntot));//log(Ntot);
 			for(j=2; j < nbrAllVar; j++ ) Prui *= dBin[0][j];
 			logC_xui_y= 0.5*(dBin[0][1] - 1)*(dBin[0][0]*Prui - 1)*logN;
 			logC_yui_x= 0.5*(dBin[0][0] - 1)*(dBin[0][1]*Prui - 1)*logN;
@@ -566,8 +560,6 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 			countmin=0;
 			min_info_logC = testinfo_xy_ui;
 		}
-
-		int p;
 		
 
 ///////////////////////////////////////////////////////////////////////
@@ -606,9 +598,6 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 		R_top=-LARGE;
 		NIxyz_ui_top = -1;
 		k_xyz_ui_top = -1;
-
-		int kkk;
-
 
 		for(zi=0; zi < nbrZi ; zi++ ){
 			// initialisation of bin numbers for continuous variable zi
@@ -751,7 +740,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 								    }
 
 								    if( NNxyuizl > 0 ){
-								        NlogN = NNxyuizl * log(NNxyuizl);
+								        NlogN = NNxyuizl * std::log(static_cast<double>(NNxyuizl));//log(NNxyuizl);
 
 									info_xuiz_y += NlogN;//
 									info_yuiz_x += NlogN;//
@@ -774,7 +763,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 
 
 							if(NNxyuiz > 0){
-							    NlogN = NNxyuiz * log(NNxyuiz);
+							    NlogN = NNxyuiz * std::log(static_cast<double>(NNxyuiz));//log(NNxyuiz);
 							    info_xui_y += NlogN;//
 							    info_yui_x += NlogN;//
 
@@ -801,7 +790,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 
 								if(sortedSample[k][2] > Lyui){
 							    if( Nyui > 0 ){
-							        NlogN = Nyui * log(Nyui);
+							        NlogN = Nyui * std::log(static_cast<double>(Nyui));//log(Nyui);
 								info_yui_x -= NlogN;//
 								info_yui_z -= NlogN;//
 								info_ui_y  += NlogN;//
@@ -813,7 +802,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 								for( l = 0; l < dBin[0][z]; l++ ){
 								    Nyuizl=Nyuiz[l];
 								    if( Nyuizl > 0 ){
-								        NlogN = Nyuizl * log(Nyuizl);
+								        NlogN = Nyuizl * std::log(static_cast<double>(Nyuizl));//log(Nyuizl);
 									info_yui_z += NlogN;//
 									info_uiz_y += NlogN;//
 									info_yuiz_x -= NlogN;//
@@ -833,7 +822,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 
 							    if(sortedSample[k][3] > Lui){
 							         if( Nui > 0 ){
-								        NlogN = Nui * log(Nui);
+								        NlogN = Nui * std::log(static_cast<double>(Nui));//log(Nui);
 									info_ui_x  -= NlogN;//
 									info_ui_y  -= NlogN;//
 									info_ui_z  -= NlogN;//
@@ -851,7 +840,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 										if( Nuizl > 0 ){
 
 
-											NlogN = Nuizl * log(Nuizl);
+											NlogN = Nuizl * std::log(static_cast<double>(Nuizl));//log(Nuizl);
 											info_ui_z  += NlogN;//
 											info_uiz_x -= NlogN;//
 											info_uiz_y -= NlogN;//
@@ -871,7 +860,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 									for( j = 0; j < dBin[0][0]; j++ ){
 										Nxuij=Nxui[j];
 										if( Nxuij > 0 ){
-											NlogN = Nxuij * log(Nxuij);
+											NlogN = Nxuij * std::log(static_cast<double>(Nxuij));//log(Nxuij);
 											info_xui_y -= NlogN;//
 											info_xui_z -= NlogN;//
 											info_ui_x  += NlogN;//
@@ -885,7 +874,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 											for( l = 0; l < dBin[0][z]; l++ ){
 												Nxuizjl=Nxuiz[j][l];
 												if( Nxuizjl > 0 ){
-													NlogN = Nxuizjl * log(Nxuizjl);
+													NlogN = Nxuizjl * std::log(static_cast<double>(Nxuizjl));//log(Nxuizjl);
 													info_xui_z += NlogN;//
 													info_uiz_x += NlogN;//
 													info_xuiz_y -= NlogN;//
@@ -915,7 +904,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 				for( j = 0; j < dBin[0][0]; j++ ){
 					Nxj=Nx[j];
 					if( Nxj > 0 ){
-						NlogN = Nxj * log(Nxj/(1.0*nSample[zi]));
+						NlogN = Nxj * std::log(static_cast<double>(Nxj/(1.0*nSample[zi])));//log(Nxj/(1.0*nSample[zi]));
 						info_yui_x  -= NlogN;//
 						info_ui_x   -= NlogN;//
 						info_uiz_x  -= NlogN;//
@@ -927,7 +916,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 				for( j = 0; j < dBin[0][1]; j++ ){
 					Nyj=Ny[j];
 					if( Nyj > 0 ){
-						NlogN = Nyj * log(Nyj/(1.0*nSample[zi]));
+						NlogN = Nyj * std::log(static_cast<double>(Nyj/(1.0*nSample[zi])));//log(Nyj/(1.0*nSample[zi]));
 						info_xui_y  -= NlogN;//
 						info_ui_y   -= NlogN;//
 						info_uiz_y  -= NlogN;//
@@ -939,7 +928,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 				for( l = 0; l < dBin[0][z]; l++ ){
 					Nzl=Nz[l];
 						if( Nzl > 0 ){
-						NlogN = Nzl * log(Nzl/(1.0*nSample[zi]));
+						NlogN = Nzl * std::log(static_cast<double>(Nzl/(1.0*nSample[zi])));//log(Nzl/(1.0*nSample[zi]));
 						info_xui_z  -= NlogN;//
 						info_yui_z  -= NlogN;//
 						info_ui_z   -= NlogN;//
@@ -952,7 +941,7 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 				if(modCplx == MDL) {
 					Prui=1;
 
-					logN=log(nSample[zi]);
+					logN=std::log(static_cast<double>(nSample[zi]));//log(nSample[zi]);
 
 					for(j=2; j < nbrAllVar; j++ )
 						Prui *= dBin[0][j];
@@ -1118,8 +1107,6 @@ double* getAllInfoNEW( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx, int n
 		free(dBin[i]);
 	free(dBin);
 
-	binX=Opt_dBin[0][0];
-	binY=Opt_dBin[0][1];
 	for(i=0; i<1;i++)
 		free(Opt_dBin[i]);
 	free(Opt_dBin);
@@ -1174,7 +1161,7 @@ void* evaluateZ(void* container) {
 
 	int randomrescaling=1;
 	float r,rr;
-	int bin_max=100,MDL=0, NML=1, TRUE=1, FALSE=0;
+	int TRUE=1;
 
 	int z;
 	int k = 0, l = 0 ;
@@ -1183,13 +1170,13 @@ void* evaluateZ(void* container) {
 
 	int nSampleZ=0;
 
-	int Lxyuiz,Lxyui,Lyui,Lui;
-	int  Nxyui,  Nyui,  Nui;
+	int Lxyui,Lyui,Lui;
+	int  Nyui,  Nui;
 	int  Nxyuis,  Nyuis,  Nuis;
 
-	int NNxyui,NNxyuiz,NNxyuizl,Ntot;  //for rescaling NML change 20160228
+	int NNxyuiz,NNxyuizl,Ntot;  //for rescaling NML change 20160228
 
-	int bin,PBin,Prui,increment,NN,X,Y,Z,i;
+	int Prui,X,Y,Z,i,MDL=0;
 
 	double NlogN,logN;
 
@@ -1261,7 +1248,6 @@ void* evaluateZ(void* container) {
 
 			NNxyuiz = 0;
 			NNxyuizl= 0;
-			Nxyui = 0;
 			Nyui  = 0;
 			Nui   = 0;
 			for( k = 0; k < dBin[0]; k++ ){ 
@@ -1367,7 +1353,7 @@ void* evaluateZ(void* container) {
 							    }
 
 							    if( NNxyuizl > 0 ){
-							        NlogN = NNxyuizl * log(NNxyuizl);
+							        NlogN = NNxyuizl * std::log(static_cast<double>(NNxyuizl));//log(NNxyuizl);
 								info_xuiz_y += NlogN;//
 								info_yuiz_x += NlogN;//
 								NNxyuiz += NNxyuizl;
@@ -1386,7 +1372,7 @@ void* evaluateZ(void* container) {
 						if(NNxyuiz > 0){
 
 
-						    NlogN = NNxyuiz * log(NNxyuiz);
+						    NlogN = NNxyuiz * std::log(static_cast<double>(NNxyuiz));//log(NNxyuiz);
 						    info_xui_y += NlogN;//
 						    info_yui_x += NlogN;//
 
@@ -1414,7 +1400,7 @@ void* evaluateZ(void* container) {
 
 							if(sortedSample[k][2] > Lyui){
 						    if( Nyui > 0 ){
-						        NlogN = Nyui * log(Nyui);
+						        NlogN = Nyui * std::log(static_cast<double>(Nyui));//log(Nyui);
 							info_yui_x -= NlogN;//
 							info_yui_z -= NlogN;//
 							info_ui_y  += NlogN;//
@@ -1426,7 +1412,7 @@ void* evaluateZ(void* container) {
 							for( l = 0; l < dBin[z]; l++ ){
 							    Nyuizl=Nyuiz[l];
 							    if( Nyuizl > 0 ){
-							        NlogN = Nyuizl * log(Nyuizl);
+							        NlogN = Nyuizl * std::log(static_cast<double>(Nyuizl));//log(Nyuizl);
 								info_yui_z += NlogN;//
 								info_uiz_y += NlogN;//
 								info_yuiz_x -= NlogN;//
@@ -1446,7 +1432,7 @@ void* evaluateZ(void* container) {
 
 						    if(sortedSample[k][3] > Lui){
 						         if( Nui > 0 ){
-							        NlogN = Nui * log(Nui);
+							        NlogN = Nui * std::log(static_cast<double>(Nui));//log(Nui);
 								info_ui_x  -= NlogN;//
 								info_ui_y  -= NlogN;//
 								info_ui_z  -= NlogN;//
@@ -1461,7 +1447,7 @@ void* evaluateZ(void* container) {
 								for( l = 0; l < dBin[z]; l++ ){
 									Nuizl=Nuiz[l];
 									if( Nuizl > 0 ){
-										NlogN = Nuizl * log(Nuizl);
+										NlogN = Nuizl * std::log(static_cast<double>(Nuizl));//log(Nuizl);
 										info_ui_z  += NlogN;//
 										info_uiz_x -= NlogN;//
 										info_uiz_y -= NlogN;//
@@ -1479,7 +1465,7 @@ void* evaluateZ(void* container) {
 								for( j = 0; j < dBin[0]; j++ ){ 
 									Nxuij=Nxui[j];
 									if( Nxuij > 0 ){
-										NlogN = Nxuij * log(Nxuij);
+										NlogN = Nxuij * std::log(static_cast<double>(Nxuij));//log(Nxuij);
 										info_xui_y -= NlogN;//
 										info_xui_z -= NlogN;//
 										info_ui_x  += NlogN;//
@@ -1493,7 +1479,7 @@ void* evaluateZ(void* container) {
 										for( l = 0; l < dBin[z]; l++ ){
 											Nxuizjl=Nxuiz[j][l];
 											if( Nxuizjl > 0 ){
-												NlogN = Nxuizjl * log(Nxuizjl);
+												NlogN = Nxuizjl * std::log(static_cast<double>(Nxuizjl));//log(Nxuizjl);
 												info_xui_z += NlogN;//
 												info_uiz_x += NlogN;//
 												info_xuiz_y -= NlogN;//
@@ -1527,7 +1513,7 @@ void* evaluateZ(void* container) {
 			for( j = 0; j < dBin[0]; j++ ){ 
 				Nxj=Nx[j];
 				if( Nxj > 0 ){
-					NlogN = Nxj * log(Nxj/(1.0*nSampleZ));
+					NlogN = Nxj * std::log(static_cast<double>(nSampleZ));//log(Nxj/(1.0*nSampleZ));
 					info_yui_x  -= NlogN;//
 					info_ui_x   -= NlogN;//
 					info_uiz_x  -= NlogN;//
@@ -1539,7 +1525,7 @@ void* evaluateZ(void* container) {
 			for( j = 0; j < dBin[1]; j++ ){ 
 				Nyj=Ny[j];
 				if( Nyj > 0 ){
-					NlogN = Nyj * log(Nyj/(1.0*nSampleZ));
+					NlogN = Nyj * std::log(static_cast<double>(nSampleZ));//log(Nyj/(1.0*nSampleZ));
 					info_xui_y  -= NlogN;//
 					info_ui_y   -= NlogN;//
 					info_uiz_y  -= NlogN;//
@@ -1551,7 +1537,7 @@ void* evaluateZ(void* container) {
 			for( l = 0; l < dBin[z]; l++ ){ 
 				Nzl=Nz[l];
 					if( Nzl > 0 ){
-					NlogN = Nzl * log(Nzl/(1.0*nSampleZ));
+					NlogN = Nzl * std::log(static_cast<double>(nSampleZ));//log(Nzl/(1.0*nSampleZ));
 					info_xui_z  -= NlogN;//
 					info_yui_z  -= NlogN;//
 					info_ui_z   -= NlogN;//
@@ -1565,7 +1551,7 @@ void* evaluateZ(void* container) {
 				Prui=1;
 				//NN = (int)floor(0.5 + ((double)nSampleZ*sampleSizeEff)/sampleSize);
 				//logN=log(NN);
-				logN=log(nSampleZ);
+				logN=std::log(static_cast<double>(nSampleZ));//log(nSampleZ);
 
 				for(j=2; j < nbrAllVar; j++ ) 
 					Prui *= dBin[j];
@@ -1728,7 +1714,6 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 	int l,ok;
 	int **sample,**sortedSample,**Opt_sortedSample; //[N+1][7]
 
-	int iii;
 	int nrow=sampleSize+1;
 	int ncol=7;
 
@@ -1744,7 +1729,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 	orderSample = (*memory).orderSample;
 	sampleKey = (*memory).sampleKey;
 
-	int bin,PBin,Prui,increment,NN,X,Y,Z;
+	int bin,PBin,Prui,increment,X,Y,Z;
 	int ptrzi,zi,z;
 
 	double NlogN,logN;
@@ -1753,7 +1738,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 	int  Nxyui,  Nyui,  Nui;
 	int  Nxyuis,  Nyuis,  Nuis;
 
-	int NNxyui,NNxyuiz,NNxyuizl,Ntot;  //for rescaling NML change 20160228
+	int NNxyui,Ntot;  //for rescaling NML change 20160228
 
 	int *Nxyuiz, *Nyuiz, *Nuiz, *Nz, *bridge;  //[Z]
 
@@ -1762,9 +1747,6 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 	Nuiz = (*memory).Nuiz;
 	Nz = (*memory).Nz;
 	bridge = (*memory).bridge;
-	int Nzs,Nuizs,Nyuizs,Nxyuizs,Nxuizs;
-
-	int  Nxyuizl, Nyuizl, Nuizl, Nzl; //[Z]
 
 	int *Ny;     
 	Ny = (*memory).Ny;
@@ -1788,19 +1770,12 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 	double info_xui_y,info_yui_x,info_ui_y,info_ui_x;
 	double logC_xui_y,logC_yui_x,logC_ui_y,logC_ui_x;
 
-	double info_xuiz_y,info_yuiz_x,info_uiz_y,info_uiz_x;
-	double logC_xuiz_y,logC_yuiz_x,logC_uiz_y,logC_uiz_x;
+	double test_xy_ui;
 
-	double info_xui_z,info_yui_z,info_ui_z;
-	double logC_xui_z,logC_yui_z,logC_ui_z;
-
-	double test_xy_ui, info3, info2;
-
-
-	double info3xy_ui,info2xy_ui,info3xy_uiz,info2xy_uiz;
-	double info3xz_ui,info2xz_ui,info3yz_ui,info2yz_ui;
-	double logC3xy_ui,logC2xy_ui,logC3xy_uiz,logC2xy_uiz;
-	double logC3xz_ui,logC2xz_ui,logC3yz_ui,logC2yz_ui;
+	double info3xy_ui,info2xy_ui;
+	double info3xz_ui,info2xz_ui;
+	double logC3xy_ui,logC2xy_ui;
+	double logC3xz_ui,logC2xz_ui;
 
 
 	double info_xy_ui,info_xy_uiz;
@@ -1826,7 +1801,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
   
   /////////////////////////
 
-	int i, j, k, errCode = 0;	// for loops
+	int i, j, k;	// for loops
 
 	int nbrAllVar;
 
@@ -1863,8 +1838,6 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 	
     dBin = (int *)malloc(ncol* sizeof(int));
 	Opt_dBin = (int *)malloc(ncol* sizeof(int));
-
-	int binX,binY;
 
 	// find samples without NA in x,y,ui and store their id in sample[k][0]
 	for( i = 0, k = 0; i < sampleSize; i++)
@@ -2033,7 +2006,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 				Ntot +=  NNxyui;
 
 				if( NNxyui > 0 ){
-				  NlogN = NNxyui * log(NNxyui);
+				  NlogN = NNxyui * std::log(static_cast<double>(NNxyui));//log(NNxyui);
 				  info_xui_y += NlogN;
 				  info_yui_x += NlogN;
 				}
@@ -2048,7 +2021,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 				if(sortedSample[k][2] > Lyui){
 
 				        if( Nyui > 0 ){
-					  NlogN = Nyui * log(Nyui);
+					  NlogN = Nyui * std::log(static_cast<double>(Nyui));//log(Nyui);
 					  info_yui_x -= NlogN;
 					  info_ui_y  += NlogN;
 					  
@@ -2064,7 +2037,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 						for( j = 0; j < dBin[0]; j++ ){ 
 							Nxuij=Nxui[j];
 							if( Nxuij > 0 ){
-								NlogN = Nxuij * log(Nxuij);
+								NlogN = Nxuij * std::log(static_cast<double>(Nxuij));//log(Nxuij);
 								info_xui_y -= NlogN;
 								info_ui_x  += NlogN;
 								if(modCplx != MDL){
@@ -2077,7 +2050,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 						}
 						
 						if( Nui > 0 ){
-						  NlogN = Nui * log(Nui);
+						  NlogN = Nui * std::log(static_cast<double>(Nui));//(Nui);
 						  info_ui_y  -= NlogN;
 						  info_ui_x  -= NlogN;
 						  if(modCplx != MDL){
@@ -2102,7 +2075,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 			Nxj=Nx[j];
 			if( Nxj > 0 ){
 			      //NlogN = Nxj * log(Nxj/(1.0*nSample0));
-				NlogN = Nxj * log(Nxj/(1.0*Ntot));
+				NlogN = Nxj * std::log(static_cast<double>(Nxj/(1.0*Ntot)));//log(Nxj/(1.0*Ntot));
 				info_yui_x -= NlogN;
 				info_ui_x  -= NlogN;
 				Nxs += Nxj;
@@ -2112,7 +2085,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 			Nyj=Ny[j];
 			if( Nyj > 0 ){
 			      //NlogN = Nyj * log(Nyj/(1.0*nSample0));
-				NlogN = Nyj * log(Nyj/(1.0*Ntot));
+				NlogN = Nyj * std::log(static_cast<double>(Nyj/(1.0*Ntot)));//log(Nyj/(1.0*Ntot));
 				info_xui_y -= NlogN;
 				info_ui_y  -= NlogN;
 				Nys += Nyj;
@@ -2126,7 +2099,7 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 		if(modCplx == MDL) {
 			Prui=1;
 
-			logN=log(Ntot);
+			logN=std::log(static_cast<double>(Ntot));//log(Ntot);
 			for(j=2; j < nbrAllVar; j++ ) Prui *= dBin[j];
 			logC_xui_y= 0.5*(dBin[1] - 1)*(dBin[0]*Prui - 1)*logN;
 			logC_yui_x= 0.5*(dBin[0] - 1)*(dBin[1]*Prui - 1)*logN;
@@ -2352,14 +2325,22 @@ double* getAllInfoNEWThreads( int* ptrAllData, int* ptrAllLevels, int* ptrVarIdx
 		ptrRetValues[7] = NIxyz_ui_top;
 		ptrRetValues[8] = k_xyz_ui_top;
 
+		
+		iterator -=1;
+		while(iterator >=0 ){
+			free(fromTo[iterator].dBin);
+			free(fromTo[iterator].Opt_dBin);
+			delete [] scoresAllZi[iterator];
+			iterator--;
+		}
+		delete [] fromTo;
+		free(pt);
+		delete [] scoresAllZi;
 		}
 	}
 
 
 	free(dBin);
-
-	binX=Opt_dBin[0];
-	binY=Opt_dBin[1];
 
 	free(Opt_dBin);
 

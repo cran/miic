@@ -5,7 +5,7 @@
 #include <time.h>
 #include "utilities.h"
 #include <algorithm>
-
+#include <cmath>
 #define M_PI		3.14159265358979323846	/* pi */
 #define eps         0.000000000001
 
@@ -19,12 +19,12 @@ static double dminarg1,dminarg2;
 
 
 #include "probaOrientation.h"
-
+using namespace std;
 
 double logF2(double scoreTpl, double I3){
 	double scoreN;
 	if(scoreTpl<(1-eps))
-		scoreN=log(-2/(scoreTpl*(1/(1+exp(-fabs(I3)))-0.5)-0.5)-3);
+		scoreN=std::log(static_cast<double>(-2/(scoreTpl*(1/(1+exp(-fabs(I3)))-0.5)-0.5)-3));//log(-2/(scoreTpl*(1/(1+exp(-fabs(I3)))-0.5)-0.5)-3);
 	else
 		scoreN=fabs(I3)+log1p(-2*exp(-fabs(I3)));
 
@@ -550,9 +550,10 @@ int OrientTpl_LV_Deg_Propag(int NbTpl, int *Tpl, double *I3, double *ProbArrowhe
 	#endif // _MY_PRINT_
 
 
-	delete(ProbArrowhead2);
-	delete(scoreTpl);
-	delete(orderTpl);
-	
+	delete [] ProbArrowhead2;
+	delete [] scoreTpl;
+	delete []orderTpl;
+	delete [] scoresN;
+
 	return( 0 );
 }

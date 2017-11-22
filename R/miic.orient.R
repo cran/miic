@@ -1,9 +1,8 @@
 
 miic.orient <- function(inputData = NULL, method = c("probabilistic", "logic"), stateOrder = NULL, edges = NULL,
                              effN = -1, cplx = c("nml", "mdl"), eta = 1,
-                             latent = FALSE, propagation = TRUE, hvs = FALSE, continuous = 0, verbose = FALSE, 
-                             confidenceShuffle = 0, confidenceThreshold= 0
-){
+                             latent = FALSE, propagation = TRUE, hvs = FALSE, continuous = 0, verbose = FALSE)
+{
   isK23 = TRUE
   isDegeneracy = FALSE
 
@@ -50,7 +49,7 @@ miic.orient <- function(inputData = NULL, method = c("probabilistic", "logic"), 
   if(method=="logic" ){
 
     res <- .Call('orientation',inData, numNodes, edges, effN, cplx, eta, latent,
-                isK23, isDegeneracy, propagation, continuous, verbose,PACKAGE = "miic")
+                isK23, isDegeneracy, propagation, continuous, verbose, PACKAGE = "miic")
 
     # create the data frame of the structures before orientation
     tmp <- unlist(res$tableOfOrientationsBeforePropagation)[1:length(res$tableOfOrientationsBeforePropagation[[1]])]
@@ -84,7 +83,7 @@ miic.orient <- function(inputData = NULL, method = c("probabilistic", "logic"), 
   } else if( method=="probabilistic" ){
 
     res <- .Call('orientationProbability',inData, numNodes, edges, effN, cplx, eta, hvs, latent,
-                 isK23, isDegeneracy, propagation, continuous, verbose, confidenceShuffle, confidenceThreshold)
+                 isK23, isDegeneracy, propagation, continuous, verbose)
 
     #create the data frame of the structures after orientation
     df = res$orientations.prob
@@ -117,21 +116,5 @@ miic.orient <- function(inputData = NULL, method = c("probabilistic", "logic"), 
   # update the returned adj matrix
   res$adjMatrix <- df
 
-
-
-  if(confidenceShuffle > 0){
-    # create the data frame for the confidence file
-    tmp <- unlist(res$confData)[1:length(res$confData[[1]])]
-    res1 <- unlist(res$confData)[(length(res$confData[[1]])+1):length(unlist(res$confData))]
-    df <- data.frame(matrix(res1, nrow=length(res$confData)-1, byrow=T),stringsAsFactors=FALSE)
-    colnames(df) <-tmp
-    df[,"confidence_ratio"] = as.numeric(df[,"confidence_ratio"])
-
-    df <-df[order(df[,"confidence_ratio"]),]
-
-
-    res$confData <- df
-
-  }
   res
 }

@@ -12,7 +12,6 @@
 #include "structure.h"
 #include "utilities.h"
 #include "computeEnsInformation.h"
-#include "confidenceCut.h"
 
 #include "probaOrientation_interface.h"
 
@@ -36,17 +35,13 @@ int sign(double val){
 * Get the value of the 3 point information and create the structures for the probabilistic orientation
 */
 void getSStructure(::Environment& environment, const int posX, const int posY, const int posZ, bool isVerbose, vector< vector<int> >& allTpl, vector<double>& allI3){
-	bool structFound = false;
 	//// To check if xk belongs to the {ui} of the base
-	bool isXkInUi = false;
-
 	vector<int> u(environment.edges[posX][posZ].edgeStructure->ui_vect_idx);
 	if(environment.edges[posX][posZ].edgeStructure->ui_vect_idx.size() > 0){
 		//// Remove xk from the {ui} if needed
 		for(int i = 0; i < environment.edges[posX][posZ].edgeStructure->ui_vect_idx.size(); i++){
 			if(u[i] == posY){
 				u.erase(u.begin() + i);
-				isXkInUi = true;
 				break;
 			}
 		}
@@ -69,16 +64,15 @@ void getSStructure(::Environment& environment, const int posX, const int posY, c
 
 	double* res = computeEnsInformationNew(environment, ui, u.size(), zi, z.size(), -1, posX, posZ, environment.cplx);
 
-
 	double Is = res[7];
 	double Cs = res[8];
 
-	delete(res);
+	free(res);
 
 	if(environment.isK23){
 
 		if(environment.isDegeneracy){
-				Cs += log(3);
+				Cs += std::log(static_cast<double>(3));//log(3);
 		}
 
 		Is = Is + Cs;
@@ -94,7 +88,7 @@ void getSStructure(::Environment& environment, const int posX, const int posY, c
 
 
 extern "C" SEXP orientationProbability(SEXP inputDataR, SEXP numNodesR, SEXP edgefileR, SEXP effNR, SEXP cplxR, SEXP etaR, SEXP hvsR, SEXP isLatentR,
-	SEXP isK23R, SEXP isDegeneracyR, SEXP propagationR, SEXP continuousR, SEXP verboseR, SEXP confidenceShuffleR, SEXP confidenceThresholdR){
+	SEXP isK23R, SEXP isDegeneracyR, SEXP propagationR, SEXP continuousR, SEXP verboseR){
 
 	// define the environment
 	::Environment environment;
@@ -109,8 +103,7 @@ extern "C" SEXP orientationProbability(SEXP inputDataR, SEXP numNodesR, SEXP edg
 	environment.typeOfData = Rcpp::as<int> (continuousR);
 	vector<string> edgesVectorOneLine;
 	edgesVectorOneLine = Rcpp::as< vector <string> > (edgefileR);
-	environment.confidenceThreshold = Rcpp::as<double> (confidenceThresholdR);
-	environment.numberShuffles = Rcpp::as<int> (confidenceShuffleR);
+	
 	vector<string> v;
 
 	environment.effN = Rcpp::as<int> (effNR);
@@ -132,13 +125,6 @@ extern "C" SEXP orientationProbability(SEXP inputDataR, SEXP numNodesR, SEXP edg
 
 	readFilesAndFillStructures(edgesVectorOneLine, environment);
 	createMemorySpace(environment, environment.m);
-
-	vector< vector <string> >confVect;
-
-	if(environment.numberShuffles > 0){
-		confVect = confidenceCut(environment);
-	}
-	ExecutionTime execTime;
 
 	vector< vector<int> > allTpl;
 	vector<double> allI3;
@@ -348,18 +334,14 @@ extern "C" SEXP orientationProbability(SEXP inputDataR, SEXP numNodesR, SEXP edg
 	adjMatrix = getAdjMatrix(environment);
 
 	List result;
-	if(environment.numberShuffles > 0){
-	    result = List::create(
-	    	_["confData"] = confVect,
-	    	_["adjMatrix"] = adjMatrix,
-	        _["orientations.prob"] = orientations
-	      ) ;
-	} else {
-		result = List::create(
-	        _["adjMatrix"] = adjMatrix,
-	        _["orientations.prob"] = orientations
-	    ) ;
-	}
+
+	result = List::create(
+        _["adjMatrix"] = adjMatrix,
+        _["orientations.prob"] = orientations
+    ) ;
+	
+	delete [] oneLineMatrixallTpl;
+	delete [] ptrRetProbValues;
 
     deleteMemorySpace(environment, environment.m);
 

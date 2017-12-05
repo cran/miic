@@ -232,6 +232,6 @@ miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(),"/temp"))
 }
 \references{
 \itemize{
-\item Verny et al., \emph{PLoS Comp. Bio. 2017.} The preprint of the paper is available at \href{https://miic.curie.fr/publications.php}{https://miic.curie.fr/publications.php}.
+\item Verny et al., \emph{PLoS Comp. Bio. 2017.}
 }
 }

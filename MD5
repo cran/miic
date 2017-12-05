@@ -1,4 +1,4 @@
-025686c756633c295cdadeca670e5189 *DESCRIPTION
+42331e7327bf3b7cc8a3e34339237558 *DESCRIPTION
 b50205a65608e6b31f7140a07576af20 *NAMESPACE
 8a83329490f3bc92cbb5a3aa459ab69c *R/data.R
 15d73959b48006dd12eb39f61f0c6c16 *R/evaluate_efn.R
@@ -7,7 +7,7 @@ b50205a65608e6b31f7140a07576af20 *NAMESPACE
 23a27aa69c6e7fdd30d8ead240e655a1 *R/gmStatistics.skeleton.lib.R
 0a6be7d93839500f11bc1991d97c78d1 *R/gmSummary.R
 c19120d1c18e25e86db5767dcfcc8baf *R/gmSummary.lib.R
-1f8e49561cf3be399f6078676bf13cd1 *R/miic.R
+63f80c45d40d384309d3b3572f5288d8 *R/miic.R
 f56a076b1cd577c7eca658d3ce3dae5f *R/miic.orient.R
 f6cd4f12a2bed4020d51f6390ee3c7f5 *R/miic.plot.R
 9e249cf685f2d2c3e3e2405e76c9b429 *R/miic.skeleton.R
@@ -24,7 +24,7 @@ f27116874bf4e6c19e8d178eb33cac92 *data/ohno_stateOrder.rda
 e9304c35e64bb0d689e9337ee62f3885 *man/cosmicCancer.Rd
 ee82115615692931b2533d7f9b01c67c *man/cosmicCancer_stateOrder.Rd
 6936b8176557a4dfc94e9fd1e3df4551 *man/hematoData.Rd
-b1af86a80fc0dbb3580bc1f19f821e39 *man/miic.Rd
+4106a415ec860ac9807d5c0a2d2987db *man/miic.Rd
 641f80420a52817ce17ece6671e66a15 *man/miic.evaluate.effn.Rd
 843ed9f299b77a3102519ab320a7d22c *man/miic.plot.Rd
 dd2b3833e4079d797dfb278008da3639 *man/miic.write.network.cytoscape.Rd

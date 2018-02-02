@@ -2,7 +2,7 @@
 
 //#define _MY_DEBUG_ 1
 //#define _MY_DEBUG_NEW 1
-#include <math.h>
+#include <cmath>
 #include <string.h>
 
 #include <stdio.h>

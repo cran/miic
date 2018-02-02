@@ -1,4 +1,4 @@
-42331e7327bf3b7cc8a3e34339237558 *DESCRIPTION
+166b54785c92f4c2f40212057210d04d *DESCRIPTION
 b50205a65608e6b31f7140a07576af20 *NAMESPACE
 8a83329490f3bc92cbb5a3aa459ab69c *R/data.R
 15d73959b48006dd12eb39f61f0c6c16 *R/evaluate_efn.R
@@ -14,7 +14,7 @@ f6cd4f12a2bed4020d51f6390ee3c7f5 *R/miic.plot.R
 e67bc298c655e8835df7dd757287b284 *R/miic.utils.R
 95897d5733d3844b947af2488d8d2ed4 *R/shared.utils.lib.R
 6e20ed7b7261c755396ccd6a2fb5b13e *R/write.cytoscape.R
-56f5fb69772a96249d878df39f9bd695 *R/write.style.R
+01cda18e51ab9cc9cc8020543a4443d4 *R/write.style.R
 6ad2e090cca5b97d79d5fec0158dd22a *data/cosmicCancer.rda
 c45e16b9419f8c315e51e7a333a47620 *data/cosmicCancer_stateOrder.rda
 49c1015d0983b3acc95d9ed2ef9d56cc *data/datalist
@@ -36,7 +36,7 @@ d0a7e312ede8df92a1240855c6853240 *man/miic.write.style.cytoscape.Rd
 fd6cb900f21d3eade279ebcd8e7dbba8 *src/computeEnsInformation.h
 e274e55bfec8e6738152044be2faa9f1 *src/computeInfo.cpp
 b92099fde178adad20c48b3d1b826928 *src/computeInfo.h
-94ca49ed6a869bef8509a56a32657564 *src/computeInfo_interface.cpp
+84f9804b03eafb859e10339330ce7bc7 *src/computeInfo_interface.cpp
 5cce2bdc080024287e6f2dcadd9f9fdc *src/computeInfo_interface.h
 3ef290b00de4a93037ee99824300ab93 *src/confidenceCut.cpp
 254a0cc0d3a35cfc7d8751ec67021a78 *src/confidenceCut.h

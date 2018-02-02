@@ -109,8 +109,8 @@ miic.write.style.cytoscape <- function(file)
                   </discreteMapping>
               </visualProperty>
               <visualProperty name=\"EDGE_WIDTH\" default=\"10.0\">
-                  <continuousMapping attributeType=\"float\" attributeName=\"log_confidence\">
-                      <continuousMappingPoint lesserValue=\"4.0\" greaterValue=\"4.0\" equalValue=\"4.0\" attrValue=\"0.0\"/>
+                  <continuousMapping attributeType=\"float\" attributeName=\"weigth\">
+                      <continuousMappingPoint lesserValue=\"2.0\" greaterValue=\"2.0\" equalValue=\"2.0\" attrValue=\"0.0\"/>
                       <continuousMappingPoint lesserValue=\"12.0\" greaterValue=\"12.0\" equalValue=\"12.0\" attrValue=\"20.0\"/>
                   </continuousMapping>
               </visualProperty>

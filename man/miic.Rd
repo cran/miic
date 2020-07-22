@@ -4,36 +4,53 @@
 \alias{miic}
 \title{MIIC, causal network learning algorithm including latent variables}
 \usage{
-miic(inputData = NULL, categoryOrder = NULL, trueEdges = NULL,
-  blackBox = NULL, nThreads = 1, cplx = c("nml", "mdl"),
-  orientation = TRUE, propagation = TRUE, latent = FALSE, neff = -1,
-  edges = NULL, confidenceShuffle = 0, confidenceThreshold = 0,
-  confList = NULL, verbose = FALSE)
+miic(
+  input_data,
+  state_order = NULL,
+  true_edges = NULL,
+  black_box = NULL,
+  n_threads = 1,
+  cplx = c("nml", "mdl"),
+  orientation = TRUE,
+  propagation = TRUE,
+  latent = c("no", "yes", "orientation"),
+  n_eff = -1,
+  edges = NULL,
+  n_shuffles = 0,
+  conf_threshold = 0,
+  confList = NULL,
+  sample_weights = NULL,
+  test_mar = TRUE,
+  consistent = c("no", "orientation", "skeleton"),
+  max_iteration = 100,
+  verbose = FALSE
+)
 }
 \arguments{
-\item{inputData}{[a data frame]
+\item{input_data}{[a data frame]
 A data frame that contains the observational data. Each
 column corresponds to one variable and each row is a sample that gives the
 values for all the observed variables. The column names correspond to the
-names of the observed variables. Data must be discrete like.}
+names of the observed variables. Numeric columns will be treated as continuous
+values, factors and character as categorical.}
 
-\item{categoryOrder}{[a data frame] An optional data frame giving information
+\item{state_order}{[a data frame] An optional data frame giving information
 about how to order the various states of categorical variables. It will be
 used to compute the signs of the edges (using partial correlation coefficient)
 by sorting each variable’s levels accordingly to the given category order.}
 
-\item{trueEdges}{[a data frame]  An optional data frame containing all the
+\item{true_edges}{[a data frame]  An optional data frame containing all the
 true edges of the graph. Each line corresponds to one edge.}
 
-\item{blackBox}{[a data frame]
+\item{black_box}{[a data frame]
 An optional data frame containing the
 pairs of variables that should be considered as independent. Each row contains
 one column for each of the two variables. The variable name must correspond to
-the one in the \emph{inputData} data frame.}
+the one in the \emph{input_data} data frame.}
 
-\item{nThreads}{[a positive integer]
-When set greater than 1, the miic algorithm allows to use multithreading
-in the skeleton initialization phase.}
+\item{n_threads}{[a positive integer]
+When set greater than 1, n_threads parallel threads will be used for computation. Make sure
+your compiler is compatible with openmp if you wish to use multithreading.}
 
 \item{cplx}{[a string; \emph{c("nml", "mdl")}]
 In practice, the finite size of the input
@@ -59,39 +76,64 @@ v-structure orientations. Otherwise, the v-structure orientations are
 propagated to downstream undirected edges in unshielded triples following
 the orientation method}
 
-\item{latent}{[a boolean value]
-When set to TRUE, the network reconstruction is taking into account
-hidden (latent) variables. Dependence between two observed variables due to
-a latent variable is indicated with a '6' in the adjacency matrix and in the
-network edges.summary and by a bi-directed edge in the (partially) oriented graph.}
+\item{latent}{[a string; \emph{c("no", "yes", "orientation")}]
+When set to "yes", the network reconstruction is taking into account hidden (latent)
+variables. When set to "orientation", latent variables are not considered during the skeleton
+reconstruction but allows bi-directed edges during the orientation. Dependence
+between two observed variables due to a latent variable is indicated with a '6' in
+the adjacency matrix and in the network edges.summary and by a bi-directed edge
+in the (partially) oriented graph.}
 
-\item{neff}{[a positive integer]
-The N samples given in the \emph{inputdata} data frame are expected
+\item{n_eff}{[a positive integer]
+The N samples given in the \emph{input_data} data frame are expected
 to be independent. In case of correlated samples such as in time series or
 Monte Carlo sampling approaches, the effective number of independent samples
-\emph{neff} can be estimated using the decay of the autocorrelation function
-(Verny \emph{et al.}, PLoS Comp. Bio. 2017). This \emph{effective} number \emph{neff}
+\emph{n_eff} can be estimated using the decay of the autocorrelation function
+(Verny \emph{et al.}, PLoS Comp. Bio. 2017). This \emph{effective} number \emph{n_eff}
 of \emph{independent} samples can be provided using this parameter.}
 
 \item{edges}{[a data frame] The miic$edges object returned by an execution
 of the miic function. It represents the result of the skeleton step. If this
-object is provided, the skelethon step will not be done, and the required
+object is provided, the skeleton step will not be done, and the required
 orientation will be performed using this edges data frame.}
 
-\item{confidenceShuffle}{[a positive integer] The number of shufflings of
+\item{n_shuffles}{[a positive integer] The number of shufflings of
 the original dataset in order to evaluate the edge specific confidence
 ratio of all inferred edges.}
 
-\item{confidenceThreshold}{[a positive floating point] The threshold used
+\item{conf_threshold}{[a positive floating point] The threshold used
 to filter the less probable edges following the skeleton step. See Verny
 \emph{et al.}, PLoS Comp. Bio. 2017.}
 
 \item{confList}{[a data frame] An optional data frame containing the
 confFile data frame returned by a miic execution. It is useful when a
 second run of the same input data set has to be performed with a different
-confidence threshold and the same confidenceShuffle value. In
+confidence threshold and the same n_shuffles value. In
 this way the computations based on the randomized dataset do not need to
 be performed again, and the values in this data frame are used instead.}
+
+\item{sample_weights}{[a numeric vector]
+An optional vector containing the weight of each observation.}
+
+\item{test_mar}{[a boolean value]
+If set to TRUE, distributions with missing values will be tested with Kullback-Leibler
+divergence : conditioning variables for the given link \eqn{X\rightarrow Y}\eqn{Z} will be
+considered only if the divergence between the full distribution and the non-missing
+distribution \eqn{KL(P(X,Y) | P(X,Y)_{!NA})} is low enough (with \eqn{P(X,Y)_{!NA}} as
+the joint distribution of \eqn{X} and \eqn{Y} on samples which are not missing on Z.
+This is a way to ensure that data are missing at random for the considered
+interaction and to avoid selection bias. Set to TRUE by default}
+
+\item{consistent}{[a string; \emph{c("no", "orientation", "skeleton")}]
+if "orientation": iterate over skeleton and orientation steps to ensure
+consistency of the network;
+if "skeleton": iterate over skeleton step to get a consistent skeleton, then
+orient edges and discard inconsistent orientations to ensure consistency of
+the network. See (Li \emph{et al.}, NeurIPS 2019) for details.}
+
+\item{max_iteration}{[a positive integer] When the \emph{consistent} parameter
+is set to "skeleton" or "orientation", the maximum number of iterations
+allowed when trying to find a consistent graph. Set to 100 by default.}
 
 \item{verbose}{[a boolean value] If TRUE, debugging output is printed.}
 }
@@ -109,12 +151,17 @@ A \emph{miic-like} object that contains:
  'N' becomes 'TN' (True Negative) or 'FN' (False Negative).
  \item \emph{ai:} the contributing nodes found by the method which participate in
  the mutual information between \emph{x} and \emph{y}, and possibly separate them.
- \item \emph{info:} provides the final mutual information times \emph{Nxy_ai} for
- the pair (\emph{x}, \emph{y}) when conditioned on the collected nodes \emph{ai}.
+ \item \emph{info:} provides the pairwise mutual information times \emph{Nxyi} for
+ the pair (\emph{x}, \emph{y}).
+ \item \emph{info_cond:} provides the conditional mutual information times \emph{Nxy_ai} for
+ the pair (\emph{x}, \emph{y}) when conditioned on the collected nodes \emph{ai}. It is 
+ equal to the \emph{info} column when \emph{ai} is an empty set.
  \item \emph{cplx:} gives the computed complexity between the (\emph{x}, \emph{y})
- variables taking into account the contributing nodes \emph{ai}.
- \item \emph{Nxy_ai:} gives the number of samples on which the information and the
- complexity have been computed. If the input dataset has no missing value, the
+ variables taking into account the contributing nodes \emph{ai}. Edges that have
+ have more conditional information \emph{info_cond} than \emph{cplx} are retained in the
+ final graph.
+ \item \emph{Nxy_ai:} gives the number of complete samples on which the information and 
+ the  complexity have been computed. If the input dataset has no missing value, the
  number of samples is the same for all pairs and corresponds to the total
  number of samples.
  \item \emph{log_confidence:} represents the \emph{info} - \emph{cplx} value.
@@ -124,17 +171,25 @@ A \emph{miic-like} object that contains:
  the edge (\emph{x}, \emph{y}) in the dataset versus the mean probability
  to do the same in multiple (user defined) number of randomized datasets.
  \item \emph{infOrt:} the orientation of the edge (\emph{x}, \emph{y}). It is
- the same value as in the adjacency matrix at row \emph{x} and column \emph{y}.
+ the same value as in the adjacency matrix at row \emph{x} and column \emph{y} : 1 for
+ unoriented, 2 for an edge from X to Y, -2 from Y to X and 6 for bidirectional.
  \item \emph{trueOrt:} the orientation of the edge (\emph{x}, \emph{y}) present
- in the true edges file (if true edges file is provided).
+ in the true edges file if provided.
  \item \emph{isOrtOk:} information about the consistency of the inferred graph’s
  orientations with a reference graph is given (i.e. if true edges file is provided).
  Y: the orientation is consistent; N: the orientation is not consistent with
- the PAG derived from the given true graph.
+ the PAG (Partial Ancestor Graph) derived from the given true graph.
  \item \emph{sign:} the sign of the partial correlation between variables
  \emph{x} and \emph{y}, conditioned on the contributing nodes \emph{ai}.
  \item \emph{partial_correlation:} value of the partial correlation for the
  edge (\emph{x}, \emph{y}) conditioned on the contributing nodes \emph{ai}.
+ \item \emph{isCausal:} details about the nature of the arrow tip for a directed
+ edge. A directed edge in a causal graph does not necessarily imply causation but it
+ does imply that the cause-effect relationship is not the other way around. An arrow-tip
+ which is itself downstream of another directed edge suggests stronger causal sense and is
+ marked by a 'Y', or 'N' otherwise.
+ \item \emph{proba:} probabilities for the inferred orientation, derived from the three-point 
+ mutual information (cf Affeldt & Isambert, UAI 2015 proceedings) and noted as p(x->y);p(x<-y).
  }
  }
 
@@ -181,6 +236,18 @@ dispensable edges, by uncovering significant information contributions from
 indirect paths, and assesses edge-specific confidences from randomization of
 available data. The remaining edges are then oriented based on the signature
 of causality in observational data.
+
+The method relies on an information theoretic based (conditional) independence
+test which is described in (Verny \emph{et al.}, PLoS Comp. Bio. 2017),
+(Cabeli \emph{et al.}, PLoS Comp. Bio. 2020). It deals with both categorical
+and continuous variables by performing optimal context-dependent discretization.
+As such, the input data frame may contain both numerical columns which will be
+treated as continuous, or character / factor columns which will be treated
+as categorical. For further details on the optimal discretization method and
+the conditional independence test, see the function discretizeMutual.
+The user may also choose to run miic with scheme presented in
+(Li \emph{et al.}, NeurIPS 2019) to improve the end result's interpretability
+by ensuring consistent separating set during the skeleton iterations.
 }
 \examples{
 library(miic)
@@ -189,8 +256,10 @@ library(miic)
 data(hematoData)
 
 # execute MIIC (reconstruct graph)
-miic.res = miic(inputData = hematoData, latent = TRUE,
-confidenceShuffle = 10, confidenceThreshold = 0.001)
+miic.res <- miic(
+  input_data = hematoData, latent = "yes",
+  n_shuffles = 10, conf_threshold = 0.001
+)
 
 # plot graph
 miic.plot(miic.res)
@@ -199,39 +268,50 @@ miic.plot(miic.res)
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
 
-miic.write.network.cytoscape(g = miic.res, file.path(tempdir(),"/temp"))
+miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(), "temp"))
 
 # EXAMPLE CANCER
 data(cosmicCancer)
 data(cosmicCancer_stateOrder)
 # execute MIIC (reconstruct graph)
-miic.res = miic(inputData = cosmicCancer, categoryOrder = cosmicCancer_stateOrder, latent = TRUE,
-confidenceShuffle = 100, confidenceThreshold = 0.001)
+miic.res <- miic(
+  input_data = cosmicCancer, state_order = cosmicCancer_stateOrder, latent = "yes",
+  n_shuffles = 100, conf_threshold = 0.001
+)
 
 # plot graph
-miic.plot(miic.res, igraphLayout=igraph::layout_on_grid)
+miic.plot(miic.res, igraphLayout = igraph::layout_on_grid)
 
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
-miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(),"/temp"))
+miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(), "temp"))
 
 # EXAMPLE OHNOLOGS
 data(ohno)
 data(ohno_stateOrder)
 # execute MIIC (reconstruct graph)
-miic.res = miic(inputData = ohno, latent = TRUE, categoryOrder = ohno_stateOrder,
-confidenceShuffle = 100, confidenceThreshold = 0.001)
+miic.res <- miic(
+  input_data = ohno, latent = "yes", state_order = ohno_stateOrder,
+  n_shuffles = 100, conf_threshold = 0.001
+)
 
 # plot graph
 miic.plot(miic.res)
 
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
-miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(),"/temp"))
+miic.write.network.cytoscape(g = miic.res, file = file.path(tempdir(), "temp"))
 }
+
 }
 \references{
 \itemize{
-\item Verny et al., \emph{PLoS Comp. Bio. 2017.}
+\item Verny et al., \emph{PLoS Comp. Bio. 2017.}  https://doi.org/10.1371/journal.pcbi.1005662
+\item Cabeli et al., \emph{PLoS Comp. Bio. 2020.}  https://doi.org/10.1371/journal.pcbi.1007866
+\item Li et al., \emph{NeurIPS 2019} http://papers.nips.cc/paper/9573-constraint-based-causal-structure-learning-with-consistent-separating-sets.pdf
 }
+}
+\seealso{
+\code{\link{discretizeMutual}} for optimal discretization and
+(conditional) independence test.
 }

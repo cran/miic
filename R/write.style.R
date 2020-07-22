@@ -5,13 +5,11 @@
 #' @export
 #' @useDynLib miic
 
-miic.write.style.cytoscape <- function(file)
-{
-  if(missing(file)){
+miic.write.style.cytoscape <- function(file) {
+  if (missing(file)) {
     cat("The file path is necessary")
-  }
-  else {
-    str= "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
+  } else {
+    str <- "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
     <vizmap documentVersion=\"3.0\" id=\"VizMap-2017_02_27-15_04\">
       <visualStyle name=\"miic_style\">
           <network>
@@ -38,7 +36,7 @@ miic.write.style.cytoscape <- function(file)
               <visualProperty name=\"NODE_CUSTOMGRAPHICS_7\" default=\"org.cytoscape.ding.customgraphics.NullCustomGraphics,0,[ Remove Graphics ],\"/>
               <visualProperty name=\"NODE_PAINT\" default=\"#787878\"/>
               <visualProperty name=\"NODE_LABEL_FONT_FACE\" default=\"Ubuntu,plain,12\"/>
-              <visualProperty name=\"NODE_LABEL_FONT_SIZE\" default=\"20\"/>
+              <visualProperty name=\"NODE_LABEL_FONT_SIZE\" default=\"14\"/>
               <visualProperty name=\"NODE_SIZE\" default=\"40.0\"/>
               <visualProperty name=\"NODE_CUSTOMPAINT_7\" default=\"DefaultVisualizableVisualProperty(id=NODE_CUSTOMPAINT_7, name=Node Custom Paint 7)\"/>
               <visualProperty name=\"NODE_CUSTOMGRAPHICS_9\" default=\"org.cytoscape.ding.customgraphics.NullCustomGraphics,0,[ Remove Graphics ],\"/>
@@ -50,7 +48,7 @@ miic.write.style.cytoscape <- function(file)
               <visualProperty name=\"NODE_CUSTOMGRAPHICS_5\" default=\"org.cytoscape.ding.customgraphics.NullCustomGraphics,0,[ Remove Graphics ],\"/>
               <visualProperty name=\"NODE_CUSTOMGRAPHICS_POSITION_5\" default=\"C,C,c,0.00,0.00\"/>
               <visualProperty name=\"NODE_LABEL_COLOR\" default=\"#000000\"/>
-              <visualProperty name=\"NODE_FILL_COLOR\" default=\"#CCCCCC\"/>
+              <visualProperty name=\"NODE_FILL_COLOR\" default=\"#f7f7f7\"/>
               <visualProperty name=\"NODE_CUSTOMGRAPHICS_POSITION_1\" default=\"C,C,c,0.00,0.00\"/>
               <visualProperty name=\"NODE_CUSTOMGRAPHICS_POSITION_2\" default=\"C,C,c,0.00,0.00\"/>
               <visualProperty name=\"COMPOUND_NODE_SHAPE\" default=\"ROUND_RECTANGLE\"/>
@@ -104,12 +102,12 @@ miic.write.style.cytoscape <- function(file)
               <visualProperty name=\"EDGE_LABEL_FONT_FACE\" default=\"SansSerif.plain,plain,10\"/>
               <visualProperty name=\"EDGE_STROKE_UNSELECTED_PAINT\" default=\"#808080\">
                   <discreteMapping attributeType=\"string\" attributeName=\"sign\">
-                      <discreteMappingEntry value=\"#FF6600\" attributeValue=\"+\"/>
+                      <discreteMappingEntry value=\"#ff3300\" attributeValue=\"+\"/>
                       <discreteMappingEntry value=\"#9999FF\" attributeValue=\"-\"/>
                   </discreteMapping>
               </visualProperty>
               <visualProperty name=\"EDGE_WIDTH\" default=\"10.0\">
-                  <continuousMapping attributeType=\"float\" attributeName=\"weigth\">
+                  <continuousMapping attributeType=\"float\" attributeName=\"weight\">
                       <continuousMappingPoint lesserValue=\"2.0\" greaterValue=\"2.0\" equalValue=\"2.0\" attrValue=\"0.0\"/>
                       <continuousMappingPoint lesserValue=\"12.0\" greaterValue=\"12.0\" equalValue=\"12.0\" attrValue=\"20.0\"/>
                   </continuousMapping>
@@ -160,6 +158,6 @@ miic.write.style.cytoscape <- function(file)
       </visualStyle>
   </vizmap>"
 
-  write(x = str, file = paste(file, ".xml", sep=""))
+    write(x = str, file = paste(file, ".xml", sep = ""))
   }
 }

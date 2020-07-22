@@ -1,177 +1,224 @@
-#include "memory.h"
-#ifndef STRUCTURE_H
-#define STRUCTURE_H
+#ifndef MIIC_STRUCTURE_H_
+#define MIIC_STRUCTURE_H_
+
+#include <Rcpp.h>
+
+#include <memory>  // std::shared_ptr
+#include <set>
 #include <string>
 #include <vector>
 
-struct StructWithOrtToPropagate{
-	int name;
-	int idxStruct;
-	int vStruct;
-	int idxEdge;
-	int dir;
+namespace miic {
+namespace structure {
+
+namespace structure_impl {
+
+using std::string;
+using std::vector;
+
+template <typename T>
+struct Grid2d {
+ private:
+  size_t rows_, cols_;
+  vector<T> data_;
+
+ public:
+  Grid2d() = default;
+  Grid2d(size_t rows, size_t cols)
+      : rows_(rows), cols_(cols), data_(rows * cols) {}
+
+  Grid2d(size_t rows, size_t cols, T&& init)
+      : rows_(rows), cols_(cols), data_(rows * cols, init) {}
+
+  Grid2d(const Grid2d&) = default;
+  Grid2d(Grid2d&&) = default;
+  Grid2d& operator=(const Grid2d&) = default;
+  Grid2d& operator=(Grid2d&&) = default;
+
+  T& operator()(size_t row, size_t col) { return data_[row * cols_ + col]; }
+  const T& operator()(size_t row, size_t col) const {
+    return data_[row * cols_ + col];
+  }
+
+  size_t n_rows() { return rows_; }
+  size_t n_cols() { return cols_; }
+  size_t size() { return data_.size(); }
+
+  auto begin() { return data_.begin(); }
+  auto end() { return data_.end(); }
+  auto cbegin() const { return data_.cbegin(); }
+  auto cend() const { return data_.cend(); }
+
+  auto row_begin(size_t row) { return data_.begin() + row * cols_; }
+  auto row_end(size_t row) { return data_.end() + (row + 1) * cols_; }
+  auto row_cbegin(size_t row) const { return data_.cbegin() + row * cols_; }
+  auto row_cend(size_t row) const { return data_.cend() + (row + 1) * cols_; }
 };
 
-struct Struct{
-	int xi;
-	int xk;
-	int xj;
+struct EdgeSharedInfo {
+  // {ui}: indices of separating nodes
+  vector<int> ui_list;
+  // {zi}: indices of candidate conditioning nodes
+  vector<int> zi_list;
+  int z_name_idx = -1;  // Index of the last best contributor in zi_list
+  double Rxyz_ui = 0;   // Score of the best contributor
+  double Ixy_ui = 0;
+  double cplx = 0;
+  int Nxy_ui = -1;
+  short int connected = 1;  // 1 or 0. An edge is by default connected.
+  double Ixy = 0;           // Mutual information without conditioning
+  double cplx_no_u = 0;     // Complexity without conditioning
+  int Nxy = -1;             // Count of joint factors without NA
 
-	int originalPositionStruct;
+  EdgeSharedInfo() = default;
+  // Remove knowledge about all contributing nodes.
+  void reset() {
+    zi_list.clear();
+    ui_list.clear();
+    z_name_idx = -1;
+    Rxyz_ui = 0;
+    Ixy_ui = Ixy;
+    cplx = cplx_no_u;
+    Nxy_ui = Nxy;
+    connected = 1;
+  }
 
-	double rv;
-	int sv;
-	double Ibase;
-	double Istruct;
-
-	short int d1;
-	short int d2;
-	short int isOut;
-	short int orgOut;
-	short int orgD1;
-	short int orgD2;
+  void setUndirected() {
+    ui_list.clear();
+    z_name_idx = -1;
+    Rxyz_ui = 0;
+    Ixy_ui = Ixy;
+    cplx = cplx_no_u;
+    Nxy_ui = Nxy;
+    connected = 1;
+  }
 };
 
-struct EdgeStructure {
-	int z_name_idx; // index of the last best contributor
-	std::vector<int> ui_vect_idx; // index of ui
-	std::vector<int> zi_vect_idx; // index of ui
-	int Nxyz_ui; // Ixy_uiz of the best z
-	double Rxyz_ui; // score of the best contributor
-	// string key;
-	double Ixy_ui;
-	double cplx;
-	int Nxy_ui;
-	short int status;
-
-	std::vector<int> indexStruct; // memorize the corresponding structure in the structures list in the environment by its index
-	std::vector<int> edgesInSpeTpl_list; // memorize the index of open structures
+struct Node {
+  string name;
+  Node(string name) : name(std::move(name)) {}
 };
 
-struct Node{
-	std::string name;
-	int level;
+struct Edge {
+  // Edge is stored in Edge** edges
+  // Status code (suppose edges[X][Y]):
+  // 0: not connected;
+  // 1: connected and undirected;
+  // 2: connected directed X -> Y;
+  // -2: connected directed X <- Y;
+  // 6: connected bidirected X <-> Y;
+  short int status;       // Current status.
+  short int status_init;  // Status after initialization.
+  short int status_prev;  // Status in the previous iteration.
+  std::shared_ptr<EdgeSharedInfo> shared_info;
 };
 
-struct ExecutionTime{
-	long double init;
-	long double iter;
-	long double initIter;
-	long double ort;
-	long double cut;
-	long double ort_after_cut;
-	long double total;
+// Observer of Edge
+class EdgeID {
+ private:
+  std::reference_wrapper<const Edge> edge_;
+
+ public:
+  int i, j;
+  EdgeID() = delete;
+  EdgeID(int i, int j, const Edge& edge) : edge_(edge), i(i), j(j) {}
+  EdgeID(int i, int j, const Edge&&) = delete;  // forbid rvalue
+
+  bool operator<(const EdgeID& rhs) const {
+    const auto info1 = this->edge_.get().shared_info;
+    const auto info2 = rhs.edge_.get().shared_info;
+    //  connected can be 0 or 1, prefer connected over non-connected
+    if (info1->connected != info2->connected)
+      return info1->connected > info2->connected;
+    if (info1->connected) {
+      return info1->Ixy_ui > info2->Ixy_ui;
+    } else {
+      return info1->Rxyz_ui > info2->Rxyz_ui;
+    }
+  }
 };
 
-struct XJAddress{
-	int i;
-	int j;
+struct CacheInfoKey{
+  std::set<int> xyz;
+  std::set<int> Ui;
+
+  //Two point information constructor : I(X;Y|Ui,Z)
+  CacheInfoKey(int x, int y, const std::set<int>& Ui_) {
+    xyz.insert({x,y});
+    Ui = Ui_;
+  }
+  //Three point information constructor : I(X;Y;Z|Ui)
+  CacheInfoKey(int x, int y, int z, const std::set<int>& Ui_) {
+    xyz.insert({x,y,z});
+    Ui = Ui_;
+  }
+
+  bool operator<(const CacheInfoKey& other) const {
+    if (xyz == other.xyz) {
+      return Ui < other.Ui;
+    }
+    return xyz < other.xyz;
+  }
 };
 
-struct Edge{
-	short int isConnected;
-	EdgeStructure* edgeStructure;
+struct CacheScoreValue {
+  int    n_samples;
+  double I_xyzUi;
+  double cplx;
 };
 
-//
- /* Structure for all the needed parameters (input plus state variables)
- */
-struct Environment {
-	ExecutionTime execTime;
-	int seed;
-	
-	int nThreads;
-	MemorySpace m;
-	std::vector<int> steps;
-	ContainerMemory* memoryThreads;
+struct MemorySpace {
+  int max_level;
+  int** sample;
+  int** sortedSample;
+  int** Opt_sortedSample;
+  int* orderSample;
+  int* sampleKey;
+  int* Nxyuiz;
+  int* Nyuiz;
+  int* Nuiz;
+  int* Nz;
+  int* Ny;
+  int* Nxui;
+  int* Nx;
+  int** Nxuiz;
+  int* bridge;
+  double* Pxyuiz;
+  // continuous data
+  int* sample_is_not_NA;
+  int* NAs_count;
 
-	double** shuffleListNumEdges; // matrix to keep the number of edges for each eta and shuffle
-	double* c2terms;
-	int* oneLineMatrix;
+  int** dataNumeric_red;
+  int** dataNumericIdx_red;
 
-	std::string myVersion; // -i parameter
-
-	std::string outDir; // -i parameter
-	std::string inData; // -o parameter
-	std::string cplxType; // -c parameter
-	std::string blackbox_name;
-	std::string edgeFile;
-		
-	int numNodes;
-	int numSamples;
-	
-	int typeOfData;
-
-	std::vector<XJAddress*> searchMoreAddress;
-	std::vector<XJAddress*> noMoreAddress;
-	int numSearchMore;
-	int numNoMore;
-
-	// keep a trace of the number of edges for every state
-	int phantomEdgenNum;
-
-
-	
-	Node* nodes;
-	Edge** edges;
-	std::vector< std::vector <std::string> > data;
-	std::vector<std::string>  vectorData;
-	int** dataNumeric;
-
-	double** dataDouble;
-
-
-	int* allLevels;
-	
-	double logEta;
-	double l;
-
-	int numberShuffles;
-	double confidenceThreshold;
-
-	bool myTest;
-	bool isDegeneracy; // -d parameter
-	bool isVerbose; // -v parameter
-	bool isLatent; // -l parameter
-	bool isNoInitEta; // -f parameter
-	bool propag;
-	bool isK23; // -k parameter
-	bool isPropagation;
-
-	int isTplReuse; // -r parameter
-	int cplx;
-	int eta; // -e parameter
-	int shuffle; // -s parameter
-	int halfVStructures;
-	int etaIterator; // -e parameter
-	int shuffleIterator; // -s parameter
-
-	int effN; // -n parameter
-	int minN;
-	//int nDg;
-	int thresPc;
-
-	int iCountStruct;
-	std::vector<Struct*> globalListOfStruct;
-	std::vector<int> vstructWithContradiction;
+  int* AllLevels_red;
+  int* cnt_red;
+  int* posArray_red;
 };
 
-
-struct Container {
-	Environment* environment;
-	int start;
-	int stop; 
-	
-	MemorySpace m;
+struct ExecutionTime {
+  double start_time_init;
+  double start_time_iter;
+  long double init;
+  long double iter;
+  long double init_iter;
+  long double ort;
+  long double cut;
+  long double ort_after_cut;
+  long double total;
 };
 
-struct ContainerInit {
-	Environment* environment;
-	int i;
-	int j; 
-	int steps;
+}  // namespace structure_impl
+using structure_impl::CacheInfoKey;
+using structure_impl::CacheScoreValue;
+using structure_impl::Edge;
+using structure_impl::EdgeID;
+using structure_impl::EdgeSharedInfo;
+using structure_impl::ExecutionTime;
+using structure_impl::Grid2d;
+using structure_impl::MemorySpace;
+using structure_impl::Node;
+}  // namespace structure
+}  // namespace miic
 
-	MemorySpace m;
-};
-
-#endif
+#endif  // MIIC_STRUCTURE_H_

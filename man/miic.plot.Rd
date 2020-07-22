@@ -4,8 +4,13 @@
 \alias{miic.plot}
 \title{Igraph plotting function for miic}
 \usage{
-miic.plot(g, method = "log_confidence", igraphLayout = NULL,
-  userLayout = NULL, verbose = F)
+miic.plot(
+  g,
+  method = "log_confidence",
+  igraphLayout = NULL,
+  userLayout = NULL,
+  verbose = F
+)
 }
 \arguments{
 \item{g}{[a miic graph object]
@@ -16,7 +21,7 @@ The column used to plot the strength of the edges. Default: pcor.}
 
 \item{igraphLayout}{[an igraph layout object]
 When set it is used to plot the network. See the igraph manual for more information.
- Default: \emph{layout_with_kk} or \emph{layout.circle} if the network has more than 40 nodes.}
+ Default: \emph{layout_with_kk}}
 
 \item{userLayout}{[a data frame]
 An optional data frame reporting the position of nodes. Each line corresponds to the \emph{(x,y)}

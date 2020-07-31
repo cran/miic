@@ -130,9 +130,9 @@ double ramanujan(int n) {
   if (n == 0) {
     return (0);
   }
-  double N = n * log(n) - n + log(1.0 * n * (1 + 4 * n * (1 + 2 * n))) / 6 +
-             log(M_PI) / 2L;
-  return (N);
+  double N = n * log(1.0 * n) - n +
+             log(1.0 * n * (1 + 4 * n * (1 + 2 * n))) / 6 + log(M_PI) / 2L;
+  return N;
 }
 
 double get_wall_time() {
@@ -233,8 +233,7 @@ void deleteMemorySpace(Environment& environment, MemorySpace& m) {
           environment.is_continuous.end(), 0) > 1) {
     int max_level = 0;
     for (int i = 0; i < environment.n_nodes; i++) {
-      if (!environment.is_continuous[i] &&
-          environment.levels[i] > max_level)
+      if (environment.levels[i] > max_level)
         max_level = environment.levels[i];
     }
 
@@ -248,11 +247,11 @@ void deleteMemorySpace(Environment& environment, MemorySpace& m) {
     free(m.sortedSample);
 
     for (i = 0; i < bin_max + 1; i++) free(m.Nxuiz[i]);
-
-    for (i = 0; i < bin_max + 1; i++) free(m.Opt_sortedSample[i]);
-
-    free(m.Opt_sortedSample);
     free(m.Nxuiz);
+
+    for (i = 0; i < nrow; i++) free(m.Opt_sortedSample[i]);
+    free(m.Opt_sortedSample);
+
     free(m.orderSample);
     free(m.sampleKey);
     free(m.Pxyuiz);
@@ -262,6 +261,7 @@ void deleteMemorySpace(Environment& environment, MemorySpace& m) {
     free(m.Ny);
     free(m.Nxui);
     free(m.Nx);
+    free(m.bridge);
   }
   // cotinuous part
   if (std::any_of(environment.is_continuous.begin(),
@@ -306,11 +306,15 @@ vector<vector<string>> getEdgesInfoTable(const Environment& env) {
 
   table.emplace_back(std::initializer_list<std::string>{"x", "y", "z.name",
       "ai.vect", "zi.vect", "Ixy", "Ixy_ai", "cplx", "Rxyz_ai", "category",
-      "Nxy_ai"});
+      "Nxy_ai", "confidence"});
   for (const auto& edge : edge_list) {
     auto i = edge.i, j = edge.j;
     auto info = env.edges[i][j].shared_info;
+    double confidence = -1;
+    if (info->exp_shuffle != -1)
+      confidence = exp(info->cplx - info->Ixy_ui) / info->exp_shuffle;
 
+    using std::to_string;
     table.emplace_back(std::initializer_list<std::string>{
         env.nodes[i].name,
         env.nodes[j].name,
@@ -319,12 +323,13 @@ vector<vector<string>> getEdgesInfoTable(const Environment& env) {
           : env.nodes[info->zi_list[info->z_name_idx]].name,
         toNameString(env, info->ui_list),
         toNameString(env, info->zi_list),
-        std::to_string(info->Ixy),
-        std::to_string(info->Ixy_ui),
-        std::to_string(info->cplx),
-        std::to_string(info->Rxyz_ui),
-        std::to_string(info->connected),
-        std::to_string(info->Nxy_ui)
+        to_string(info->Ixy),
+        to_string(info->Ixy_ui),
+        to_string(info->cplx),
+        to_string(info->Rxyz_ui),
+        to_string(info->connected),
+        to_string(info->Nxy_ui),
+        to_string(confidence)
     });
   }
 
@@ -419,7 +424,10 @@ int printProgress(double percentage, double startTime, int prg_numSearchMore) {
     double remaining_time =
         (get_wall_time() - startTime) / percentage * (1 - percentage);
     stringstream sremaining_time;
-    if ((remaining_time > 60) & (!std::isinf(remaining_time))) {
+    if (std::isinf(remaining_time) || remaining_time < 0){
+      remaining_time = 0;
+    }
+    if (remaining_time > 60) {
       int minutes = remaining_time / 60;
       if (minutes > 60) {
         int hours = minutes / 60;

@@ -1,6 +1,9 @@
 #ifndef MIIC_COMPUTATION_CACHE
 #define MIIC_COMPUTATION_CACHE
 
+#define _USE_MATH_DEFINES
+#include <cmath>
+
 #include "structure.h"
 
 namespace miic {
@@ -35,7 +38,7 @@ class CtermCache {
         log_factorial_(size_n_, 0),
         log_c_(n_samples, kLevelLimit, -1) {
     for (int i = 2; i < size_n_; ++i) {  // first two terms are zero
-      double logi = log(i);
+      double logi = log(static_cast<double>(i));
       log_n_[i] = logi;
       n_log_n_[i] = i * logi;
       log_factorial_[i] = log_factorial_[i - 1] + logi;

@@ -32,7 +32,7 @@ void reset_u_cutpoints(int** cut, int nbrUi, vector<int> ptr_cnt,
       for (int j = init_nbin; j < maxbins; j++) {
         cut[l][j] = 0;
       }
-      r[l] = init_nbin;
+      r[l] = min(init_nbin, AllLevels[ptrVarIdx[l]]);
     } else {
       r[l] = AllLevels[ptrVarIdx[l]];
     }
@@ -343,7 +343,7 @@ void optfun_onerun_kmdl_coarse(vector<int> sortidx_var, vector<int> data, int nb
 // optimize on x I(x,y): Hx - Hxy - kmdl
 // optimize on y I(x,y): Hy - Hxy - kmdl
 // until convergence
-double* compute_Ixy_alg1(vector<vector<int> > data, vector<vector<int> > sortidx,
+vector<double> compute_Ixy_alg1(vector<vector<int> > data, vector<vector<int> > sortidx,
     vector<int> ptr_cnt, vector<int> ptrVarIdx, vector<int> AllLevels, int n,
     int** cut, int* r, vector<double> sample_weights, bool flag_sample_weights,
     Environment& environment, bool saveIterations) {
@@ -355,7 +355,7 @@ double* compute_Ixy_alg1(vector<vector<int> > data, vector<vector<int> > sortidx
   int j, l;
 
   // res_tempults res_temp[0]->I,res_temp[1]->I-k
-  double* res_temp = (double*)calloc(2, sizeof(double));
+  vector<double> res_temp;
 
   // allocation factors  x y
   int** datafactors;
@@ -416,7 +416,7 @@ double* compute_Ixy_alg1(vector<vector<int> > data, vector<vector<int> > sortidx
   for (int new_initbins = 2; (new_initbins < initbins) && (new_initbins < 20) &&
                              (new_initbins < min_unique_values);
        new_initbins++) {
-    int lbin = floor(n / new_initbins);
+    int lbin = n / new_initbins;
     if (lbin < 1) {
       lbin = 1;
       new_initbins = n;
@@ -459,10 +459,9 @@ double* compute_Ixy_alg1(vector<vector<int> > data, vector<vector<int> > sortidx
       max_initbins = new_initbins;
       max_res = res_temp[1];
     }
-    free(res_temp);
   }
 
-  int lbin = floor(n / max_initbins);
+  int lbin = n / max_initbins;
   if (lbin < 1) {
     lbin = 1;
     max_initbins = n;
@@ -610,14 +609,13 @@ double* compute_Ixy_alg1(vector<vector<int> > data, vector<vector<int> > sortidx
     }
     MIk[stop] = res_temp[1];
     MI[stop] = res_temp[0];
-    free(res_temp);
 
     if (flag || (ptr_cnt[ptrVarIdx[0]] == 0) || (ptr_cnt[ptrVarIdx[1]] == 0)) {
       break;
     }
   }  // for
 
-  double* return_res = (double*)calloc(2, sizeof(double));
+  vector<double> return_res(2);
   if (flag) {
     return_res[0] = I_av;
     return_res[1] = Ik_av;
@@ -676,7 +674,7 @@ double* compute_Ixy_alg1(vector<vector<int> > data, vector<vector<int> > sortidx
   return return_res;
 }
 
-double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
+vector<double> compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
     vector<vector<int> > sortidx, vector<int> ptr_cnt, vector<int> ptrVarIdx,
     vector<int> AllLevels, int nbrUi, int n, int** cut, int* r, int lbin,
     vector<double> sample_weights, bool flag_sample_weights,
@@ -689,7 +687,7 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
   int j, l;
   int STEPMAX1 = 50;
   // res_tempults res_temp[0]->I,res_temp[1]->I-k
-  double* res_temp = (double*)calloc(2, sizeof(double));
+  vector<double> res_temp;
   // allocation factors  x y
   int** datafactors = (int**)calloc((nbrUi + 2), sizeof(int*));
   for (l = 0; l < (nbrUi + 2); l++) {
@@ -795,7 +793,6 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
           r_temp, n, environment.cache.cterm, 0);
     I_y_xu = res_temp[0];  // Before optimization on X.
     Ik_y_xu = res_temp[1];
-    free(res_temp);
 
     r_temp[0] = r[0];
     r_temp[1] = ruiyx[1];
@@ -808,7 +805,6 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
           r_temp, n, environment.cache.cterm, 0);
     I_x_yu = res_temp[0];  // Before updating Y (and X).
     Ik_x_yu = res_temp[1];
-    free(res_temp);
 
     if ((Ik_y_xu + Ik_x_yu) > max_res) {
       max_initbins = new_initbins;
@@ -816,7 +812,7 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
     }
   }
 
-  lbin = floor(n / max_initbins);
+  lbin = n / max_initbins;
   if (lbin < 1) {
     lbin = 1;
     max_initbins = n;
@@ -911,7 +907,6 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
           r_temp, n, environment.cache.cterm, 0);
     I_y_xu = res_temp[0];  // Before optimization on X.
     Ik_y_xu = res_temp[1];
-    free(res_temp);
     if ((ptr_cnt[ptrVarIdx[0]] == 1) && (r_old[0] > 1)) {
       np = min(AllLevels[ptrVarIdx[0]], maxbins);
       if (r_old[0] < np) {
@@ -1009,7 +1004,6 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
           r_temp, n, environment.cache.cterm, 0);
     I_x_yu = res_temp[0];  // Before updating Y (and X).
     Ik_x_yu = res_temp[1];
-    free(res_temp);
     if ((ptr_cnt[ptrVarIdx[1]] == 1) && (r_old[1] > 1)) {
       np = min(AllLevels[ptrVarIdx[1]], maxbins);
       if (r_old[1] < np) {
@@ -1095,7 +1089,6 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
           r_temp, n, environment.cache.cterm, 0);
     I_x_u = res_temp[0];  // After optimization on U.
     Ik_x_u = res_temp[1];
-    free(res_temp);
     // Reset cutpoints on U
     reset_u_cutpoints(cut, nbrUi, ptr_cnt, ptrVarIdx, initbins, maxbins, lbin,
         r, AllLevels, n);
@@ -1155,7 +1148,6 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
           r_temp, n, environment.cache.cterm, 0);
     I_y_u = res_temp[0];  // After optimization on U.
     Ik_y_u = res_temp[1];
-    free(res_temp);
     // Reset cutpoints on U
     reset_u_cutpoints(cut, nbrUi, ptr_cnt, ptrVarIdx, initbins, maxbins, lbin,
         r, AllLevels, n);
@@ -1208,7 +1200,7 @@ double* compute_Ixy_cond_u_new_alg1(vector<vector<int> > data,
     MI1[stop1] = cond_I;
 
   }  // end stop1
-  double* return_res = (double*)calloc(2, sizeof(double));
+  vector<double> return_res(2);
   if (flag1) {
     return_res[0] = I_av1;
     return_res[1] = Ik_av1;
@@ -1258,9 +1250,8 @@ double* compute_mi_cond_alg1(vector<vector<int> > data,
   int maxbins = environment.maxbins;
   int initbins = environment.initbins;
 
-  double* res = new double[3]();  // results res[0]->I,res[1]->I-k
-  double* res_temp;  //=(double *)calloc(2,sizeof(double));//results
-                     //res[0]->I,res[1]->I-k
+  vector<double> res_temp;      // res_temp[0]->I,res_temp[1]->I-k
+  double* res = new double[3];  // res[0]->Rscore,res[1]->I3,res[2]->Ik3
 
   int j, l;
 
@@ -1272,10 +1263,14 @@ double* compute_mi_cond_alg1(vector<vector<int> > data,
     cut[l] = (int*)calloc(maxbins, sizeof(int));
   }
 
-  int lbin = floor(n / initbins);
+  int lbin = n / initbins;
   if (lbin < 1) {
     lbin = 1;
     initbins = n;
+  }
+  for (l = 0; l < (nbrUi + 2); l++) {
+    if (ptr_cnt[ptrVarIdx[l]] == 1)
+      initbins = min(initbins, AllLevels[ptrVarIdx[l]]);
   }
 
   // no conditioning, empty set of variables in u
@@ -1302,7 +1297,6 @@ double* compute_mi_cond_alg1(vector<vector<int> > data,
     res[1] = res_temp[0];
     res[2] = res_temp[0] - res_temp[1];
 
-    free(res_temp);
     free(r);
     for (l = 0; l < (nbrUi + 2); l++) {
       free(cut[l]);
@@ -1332,7 +1326,6 @@ double* compute_mi_cond_alg1(vector<vector<int> > data,
     res[1] = res_temp[0];
     res[2] = res_temp[0] - res_temp[1];
 
-    free(res_temp);
     free(r);
     for (l = 0; l < (nbrUi + 2); l++) {
       free(cut[l]);
@@ -1366,9 +1359,8 @@ double* compute_Rscore_Ixyz_alg5(vector<vector<int> > data,
   double Ik_xy_u, Ik_xz_u, Ik_yz_u, Ik_xy_zu;
   double I_xyz_u, Ik_xyz_u;
 
-  double* res_temp =
-      (double*)calloc(2, sizeof(double));  // results res[0]->I,res[1]->I-k
-  double* res = new double[3]();           // results res[0]->I,res[1]->I-k
+  vector<double> res_temp;      // res_temp[0]->I,res_temp[1]->I-k
+  double* res = new double[3];  // res[0]->Rscore,res[1]->I3,res[2]->Ik3
 
   vector<int> ptrVarIdx_t((nbrUi + 2));
 
@@ -1379,7 +1371,7 @@ double* compute_Rscore_Ixyz_alg5(vector<vector<int> > data,
     cut[l] = (int*)calloc(maxbins, sizeof(int));
   }
 
-  int lbin = floor(n / initbins);
+  int lbin = n / initbins;
   if (lbin < 1) {
     lbin = 1;
     initbins = n;
@@ -1436,7 +1428,6 @@ double* compute_Rscore_Ixyz_alg5(vector<vector<int> > data,
       environment, saveIterations);
   I_xy_zu = res_temp[0];
   Ik_xy_zu = res_temp[1];
-  free(res_temp);
 
   // I(x,y|u)
   for (l = 0; l < (nbrUi + 2); l++) {
@@ -1465,7 +1456,6 @@ double* compute_Rscore_Ixyz_alg5(vector<vector<int> > data,
   }
   I_xy_u = res_temp[0];
   Ik_xy_u = res_temp[1];
-  free(res_temp);
 
   // I(z,x|u)
   ptrVarIdx_t[0] = ptrVarIdx[0];          // X
@@ -1497,7 +1487,6 @@ double* compute_Rscore_Ixyz_alg5(vector<vector<int> > data,
         saveIterations);
   }
   Ik_xz_u = res_temp[1];
-  free(res_temp);
 
   // I(z,y|u)
   ptrVarIdx_t[0] = ptrVarIdx[1];          // Y
@@ -1529,7 +1518,6 @@ double* compute_Rscore_Ixyz_alg5(vector<vector<int> > data,
         saveIterations);
   }
   Ik_yz_u = res_temp[1];
-  free(res_temp);
 
   // compute conditional three point mutual information
   I_xyz_u = I_xy_u - I_xy_zu;

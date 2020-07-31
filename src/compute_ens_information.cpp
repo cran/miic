@@ -214,7 +214,7 @@ void computeContributingScores(Environment& environment, int* ziContPosIdx,
         if (environment.test_mar && n_samples_nonNA != samplesNotNA) {
           double kldiv = compute_kl_divergence(posArray, environment,
               samplesNotNA, AllLevels_red, sample_is_not_NA);
-          double cplxMdl = log(samplesNotNA);
+          double cplxMdl = environment.cache.cterm->getLog(samplesNotNA);
 
           if ((kldiv - cplxMdl) > 0) {
             // the sample is not representative of the population, hence we do
@@ -372,7 +372,7 @@ double* computeEnsInformationContinuous(Environment& environment, int* myCond,
         res_new[2] = res[6];
         res_new[1] = posZi[int(res[3])];
         res_new[0] = res[0];
-        free(res);
+        delete[] res;
         delete[] posZi;
       }
     }
@@ -408,6 +408,7 @@ double* computeEnsInformationContinuous(Environment& environment, int* myCond,
         // res_new[0]=(double) samplesNotNA;
       }
     }  // optimal z search
+    delete[] scoresZ;
 
     if (ziContPosIdx != NULL) delete[] ziContPosIdx;
   }
@@ -553,7 +554,6 @@ void SearchForNewContributingNodeAndItsRank(
       // z.name has the right bin xyzi key
       info->z_name_idx = vect[3];
       info->Rxyz_ui = vect[6];
-      free(vect);
 
     } else if (environment.verbose) {
       Rcout << "# --!!--> Rxyz_ui.tmp = " << vect[6]
@@ -582,8 +582,8 @@ void SearchForNewContributingNodeAndItsRank(
       Rcout << "# --!!--> Rxyz_ui.tmp = " << vect[2]
            << " < Rxyz_ui = " << info->Rxyz_ui << "\n";
     }
-    delete[] vect;
   }
+  delete[] vect;
 }
 
 }  // namespace computation

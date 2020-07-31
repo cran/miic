@@ -244,7 +244,6 @@ bool skeletonIteration(Environment& environment) {
       topEdgeElt->Ixy_ui = v[1];
       topEdgeElt->Nxy_ui = v[0];
       topEdgeElt->cplx = v[2];
-      free(v);
     } else {
       v = computeEnsInformationContinuous(environment,
           &environment.edges[posX][posY].shared_info->ui_list[0],
@@ -253,15 +252,13 @@ bool skeletonIteration(Environment& environment) {
       topEdgeElt->Nxy_ui = v[0];
       topEdgeElt->Ixy_ui = v[1];
       topEdgeElt->cplx = v[2];
-
-      delete[] v;
     }
-
+    delete[] v;
     double topEdgeElt_kxy_ui = topEdgeElt->cplx;
 
     if (environment.degenerate)
       topEdgeElt_kxy_ui =
-          topEdgeElt->cplx + (topEdgeElt->ui_list.size() * log(3));
+          topEdgeElt->cplx + (topEdgeElt->ui_list.size() * log(3.0));
 
     int nRemainingEdges = environment.numSearchMore + environment.numNoMore;
 

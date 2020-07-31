@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 
+#include "confidence_cut.h"
 #include "orientation_probability.h"
 #include "utilities.h"
 
@@ -53,14 +54,12 @@ List reconstruct(List input_data, List arg_list) {
   long double spentTime = (get_wall_time() - startTime);
   environment.exec_time.init = spentTime;
   environment.exec_time.init_iter = spentTime;
-  environment.exec_time.iter = 0;
   if (environment.verbose) {
     Rcout << "\n# ----> First contributing node elapsed time:" << spentTime
               << "sec\n\n";
   }
   BCC bcc(environment);
   auto cycle_tracker = CycleTracker(environment);
-  vector<vector<string>> confVect;
   vector<vector<string>> orientations;
   do {
     if (environment.consistent > 0) bcc.analyse();
@@ -94,15 +93,14 @@ List reconstruct(List input_data, List arg_list) {
       environment.exec_time.init_iter += spentTime;
     }
 
-    startTime = get_wall_time();
     if (environment.n_shuffles > 0) {
+      startTime = get_wall_time();
       Rcout << "Computing confidence cut with permutations..." << std::flush;
-      confVect = confidenceCut(environment);
+      setConfidence(environment);
       long double spentTime = (get_wall_time() - startTime);
       environment.exec_time.cut += spentTime;
-      Rcout << " done." << std::endl;
-    } else {
-      environment.exec_time.cut = 0;
+      Rcout << " done.\n";
+      confidenceCut(environment);
     }
     // Oriente edges for non-consistent/orientation consistent algorithm
     if (environment.orientation_phase && environment.numNoMore > 0 &&
@@ -167,9 +165,6 @@ List reconstruct(List input_data, List arg_list) {
       _["orientations.prob"] = orientations,
       _["time"]              = time,
       _["interrupted"]       = false);
-  if (environment.n_shuffles > 0) {
-    result.push_back(confVect, "confData");
-  }
   if (environment.consistent > 0) {
     result.push_back(cycle_tracker.adj_matrices, "adj_matrices");
   }
@@ -178,6 +173,7 @@ List reconstruct(List input_data, List arg_list) {
     deleteMemorySpace(environment, environment.memoryThreads[i]);
   }
   deleteMemorySpace(environment, environment.m);
+  delete[] environment.memoryThreads;
 
   return result;
 }

@@ -12,17 +12,17 @@ miic(
   n_threads = 1,
   cplx = c("nml", "mdl"),
   orientation = TRUE,
+  ori_proba_ratio = 1,
   propagation = TRUE,
   latent = c("no", "yes", "orientation"),
   n_eff = -1,
-  edges = NULL,
   n_shuffles = 0,
   conf_threshold = 0,
-  confList = NULL,
   sample_weights = NULL,
   test_mar = TRUE,
   consistent = c("no", "orientation", "skeleton"),
   max_iteration = 100,
+  consensus_threshold = 0.8,
   verbose = FALSE
 )
 }
@@ -70,6 +70,12 @@ of the conditional 3-point information of unshielded triples. The propagation
 procedure relyes on probabilities; for more details, see Verny \emph{et al.}, PLoS Comp. Bio. 2017).
 If set to FALSE the orientation step is not performed.}
 
+\item{ori_proba_ratio}{[a floating point between 0 and 1] When orienting an
+edge according to the probability of orientation, the threshold to accept the
+orientation. For a given edge, denote by p > 0.5 the probability of
+orientation, the orientation is accepted if (1 - p) / p < ori_proba_ratio.
+0 means reject all orientations, 1 means accept all orientations.}
+
 \item{propagation}{[a boolean value]
 If set to FALSE, the skeleton is partially oriented with only the
 v-structure orientations. Otherwise, the v-structure orientations are
@@ -92,11 +98,6 @@ Monte Carlo sampling approaches, the effective number of independent samples
 (Verny \emph{et al.}, PLoS Comp. Bio. 2017). This \emph{effective} number \emph{n_eff}
 of \emph{independent} samples can be provided using this parameter.}
 
-\item{edges}{[a data frame] The miic$edges object returned by an execution
-of the miic function. It represents the result of the skeleton step. If this
-object is provided, the skeleton step will not be done, and the required
-orientation will be performed using this edges data frame.}
-
 \item{n_shuffles}{[a positive integer] The number of shufflings of
 the original dataset in order to evaluate the edge specific confidence
 ratio of all inferred edges.}
@@ -104,13 +105,6 @@ ratio of all inferred edges.}
 \item{conf_threshold}{[a positive floating point] The threshold used
 to filter the less probable edges following the skeleton step. See Verny
 \emph{et al.}, PLoS Comp. Bio. 2017.}
-
-\item{confList}{[a data frame] An optional data frame containing the
-confFile data frame returned by a miic execution. It is useful when a
-second run of the same input data set has to be performed with a different
-confidence threshold and the same n_shuffles value. In
-this way the computations based on the randomized dataset do not need to
-be performed again, and the values in this data frame are used instead.}
 
 \item{sample_weights}{[a numeric vector]
 An optional vector containing the weight of each observation.}
@@ -135,6 +129,19 @@ the network. See (Li \emph{et al.}, NeurIPS 2019) for details.}
 is set to "skeleton" or "orientation", the maximum number of iterations
 allowed when trying to find a consistent graph. Set to 100 by default.}
 
+\item{consensus_threshold}{[a floating point between 0.5 and 1.0]
+When the \emph{consistent} parameter is set to "skeleton" or "orientation",
+and when the result graph is inconsistent, or is a union of more than one
+inconsistent graphs, a consensus graph will be produced based on a pool of
+graphs. If the result graph is inconsistent, then the pool is made of
+[max_iteration] graphs from the iterations, otherwise it is made of those
+graphs in the union. In the consensus graph, the status of each edge is
+determined as follows: Choose from the pool the most probable status. For
+example, if the pool contains [A, B, B, B, C], then choose status B, if the
+frequency of presence of B (0.6 in the example) is equal to or higher than
+[consensus_threshold], then set B as the status of the edge in the consensus
+graph, otherwise set undirected edge as the status. Set to 0.8 by default.}
+
 \item{verbose}{[a boolean value] If TRUE, debugging output is printed.}
 }
 \value{
@@ -154,13 +161,13 @@ A \emph{miic-like} object that contains:
  \item \emph{info:} provides the pairwise mutual information times \emph{Nxyi} for
  the pair (\emph{x}, \emph{y}).
  \item \emph{info_cond:} provides the conditional mutual information times \emph{Nxy_ai} for
- the pair (\emph{x}, \emph{y}) when conditioned on the collected nodes \emph{ai}. It is 
+ the pair (\emph{x}, \emph{y}) when conditioned on the collected nodes \emph{ai}. It is
  equal to the \emph{info} column when \emph{ai} is an empty set.
  \item \emph{cplx:} gives the computed complexity between the (\emph{x}, \emph{y})
  variables taking into account the contributing nodes \emph{ai}. Edges that have
  have more conditional information \emph{info_cond} than \emph{cplx} are retained in the
  final graph.
- \item \emph{Nxy_ai:} gives the number of complete samples on which the information and 
+ \item \emph{Nxy_ai:} gives the number of complete samples on which the information and
  the  complexity have been computed. If the input dataset has no missing value, the
  number of samples is the same for all pairs and corresponds to the total
  number of samples.
@@ -188,7 +195,7 @@ A \emph{miic-like} object that contains:
  does imply that the cause-effect relationship is not the other way around. An arrow-tip
  which is itself downstream of another directed edge suggests stronger causal sense and is
  marked by a 'Y', or 'N' otherwise.
- \item \emph{proba:} probabilities for the inferred orientation, derived from the three-point 
+ \item \emph{proba:} probabilities for the inferred orientation, derived from the three-point
  mutual information (cf Affeldt & Isambert, UAI 2015 proceedings) and noted as p(x->y);p(x<-y).
  }
  }
@@ -262,9 +269,11 @@ miic.res <- miic(
 )
 
 # plot graph
-miic.plot(miic.res)
-\dontrun{
+if(require(igraph)) {
+ plot(miic.res, method="igraph")
+}
 
+\donttest{
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
 
@@ -280,7 +289,9 @@ miic.res <- miic(
 )
 
 # plot graph
-miic.plot(miic.res, igraphLayout = igraph::layout_on_grid)
+if(require(igraph)) {
+ plot(miic.res)
+}
 
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
@@ -296,7 +307,9 @@ miic.res <- miic(
 )
 
 # plot graph
-miic.plot(miic.res)
+if(require(igraph)) {
+ plot(miic.res)
+}
 
 # write graph to graphml format. Note that to correctly visualize
 # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).

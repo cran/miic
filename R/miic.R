@@ -80,6 +80,12 @@
 #' procedure relyes on probabilities; for more details, see Verny \emph{et al.}, PLoS Comp. Bio. 2017).
 #' If set to FALSE the orientation step is not performed.
 #'
+#' @param ori_proba_ratio [a floating point between 0 and 1] When orienting an
+#' edge according to the probability of orientation, the threshold to accept the
+#' orientation. For a given edge, denote by p > 0.5 the probability of
+#' orientation, the orientation is accepted if (1 - p) / p < ori_proba_ratio.
+#' 0 means reject all orientations, 1 means accept all orientations.
+#'
 #' @param propagation [a boolean value]
 #' If set to FALSE, the skeleton is partially oriented with only the
 #' v-structure orientations. Otherwise, the v-structure orientations are
@@ -94,11 +100,6 @@
 #' @param true_edges [a data frame]  An optional data frame containing all the
 #' true edges of the graph. Each line corresponds to one edge.
 #'
-#' @param edges [a data frame] The miic$edges object returned by an execution
-#' of the miic function. It represents the result of the skeleton step. If this
-#' object is provided, the skeleton step will not be done, and the required
-#' orientation will be performed using this edges data frame.
-#'
 #' @param n_shuffles [a positive integer] The number of shufflings of
 #' the original dataset in order to evaluate the edge specific confidence
 #' ratio of all inferred edges.
@@ -106,13 +107,6 @@
 #' @param conf_threshold [a positive floating point] The threshold used
 #' to filter the less probable edges following the skeleton step. See Verny
 #' \emph{et al.}, PLoS Comp. Bio. 2017.
-#'
-#' @param confList [a data frame] An optional data frame containing the
-#' confFile data frame returned by a miic execution. It is useful when a
-#' second run of the same input data set has to be performed with a different
-#' confidence threshold and the same n_shuffles value. In
-#' this way the computations based on the randomized dataset do not need to
-#' be performed again, and the values in this data frame are used instead.
 #'
 #' @param sample_weights [a numeric vector]
 #' An optional vector containing the weight of each observation.
@@ -137,6 +131,19 @@
 #' is set to "skeleton" or "orientation", the maximum number of iterations
 #' allowed when trying to find a consistent graph. Set to 100 by default.
 #'
+#' @param consensus_threshold [a floating point between 0.5 and 1.0]
+#' When the \emph{consistent} parameter is set to "skeleton" or "orientation",
+#' and when the result graph is inconsistent, or is a union of more than one
+#' inconsistent graphs, a consensus graph will be produced based on a pool of
+#' graphs. If the result graph is inconsistent, then the pool is made of
+#' [max_iteration] graphs from the iterations, otherwise it is made of those
+#' graphs in the union. In the consensus graph, the status of each edge is
+#' determined as follows: Choose from the pool the most probable status. For
+#' example, if the pool contains [A, B, B, B, C], then choose status B, if the
+#' frequency of presence of B (0.6 in the example) is equal to or higher than
+#' [consensus_threshold], then set B as the status of the edge in the consensus
+#' graph, otherwise set undirected edge as the status. Set to 0.8 by default.
+#'
 #' @param verbose [a boolean value] If TRUE, debugging output is printed.
 #'
 #' @param n_threads [a positive integer]
@@ -159,13 +166,13 @@
 #'  \item \emph{info:} provides the pairwise mutual information times \emph{Nxyi} for
 #'  the pair (\emph{x}, \emph{y}).
 #'  \item \emph{info_cond:} provides the conditional mutual information times \emph{Nxy_ai} for
-#'  the pair (\emph{x}, \emph{y}) when conditioned on the collected nodes \emph{ai}. It is 
+#'  the pair (\emph{x}, \emph{y}) when conditioned on the collected nodes \emph{ai}. It is
 #'  equal to the \emph{info} column when \emph{ai} is an empty set.
 #'  \item \emph{cplx:} gives the computed complexity between the (\emph{x}, \emph{y})
 #'  variables taking into account the contributing nodes \emph{ai}. Edges that have
 #'  have more conditional information \emph{info_cond} than \emph{cplx} are retained in the
 #'  final graph.
-#'  \item \emph{Nxy_ai:} gives the number of complete samples on which the information and 
+#'  \item \emph{Nxy_ai:} gives the number of complete samples on which the information and
 #'  the  complexity have been computed. If the input dataset has no missing value, the
 #'  number of samples is the same for all pairs and corresponds to the total
 #'  number of samples.
@@ -193,7 +200,7 @@
 #'  does imply that the cause-effect relationship is not the other way around. An arrow-tip
 #'  which is itself downstream of another directed edge suggests stronger causal sense and is
 #'  marked by a 'Y', or 'N' otherwise.
-#'  \item \emph{proba:} probabilities for the inferred orientation, derived from the three-point 
+#'  \item \emph{proba:} probabilities for the inferred orientation, derived from the three-point
 #'  mutual information (cf Affeldt & Isambert, UAI 2015 proceedings) and noted as p(x->y);p(x<-y).
 #'  }
 #'  }
@@ -245,9 +252,11 @@
 #' )
 #'
 #' # plot graph
-#' miic.plot(miic.res)
-#' \dontrun{
+#' if(require(igraph)) {
+#'  plot(miic.res, method="igraph")
+#' }
 #'
+#' \donttest{
 #' # write graph to graphml format. Note that to correctly visualize
 #' # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
 #'
@@ -263,7 +272,9 @@
 #' )
 #'
 #' # plot graph
-#' miic.plot(miic.res, igraphLayout = igraph::layout_on_grid)
+#' if(require(igraph)) {
+#'  plot(miic.res)
+#' }
 #'
 #' # write graph to graphml format. Note that to correctly visualize
 #' # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
@@ -279,7 +290,9 @@
 #' )
 #'
 #' # plot graph
-#' miic.plot(miic.res)
+#' if(require(igraph)) {
+#'  plot(miic.res)
+#' }
 #'
 #' # write graph to graphml format. Note that to correctly visualize
 #' # the network we created the miic style for Cytoscape (http://www.cytoscape.org/).
@@ -293,17 +306,17 @@ miic <- function(input_data,
                  n_threads = 1,
                  cplx = c("nml", "mdl"),
                  orientation = TRUE,
+                 ori_proba_ratio = 1,
                  propagation = TRUE,
                  latent = c("no", "yes", "orientation"),
                  n_eff = -1,
-                 edges = NULL,
                  n_shuffles = 0,
                  conf_threshold = 0,
-                 confList = NULL,
                  sample_weights = NULL,
                  test_mar = TRUE,
                  consistent = c("no", "orientation", "skeleton"),
                  max_iteration = 100,
+                 consensus_threshold = 0.8,
                  verbose = FALSE) {
   res <- NULL
 
@@ -371,11 +384,6 @@ miic <- function(input_data,
       )
     )
   }
-  # skip skeleton step when edges are present
-  skeleton <- TRUE
-  if (!is.null(edges)) {
-    skeleton <- FALSE
-  }
 
   if (propagation != TRUE && propagation != FALSE) {
     stop("The propagation type is not correct. Allowed types are TRUE or FALSE")
@@ -402,7 +410,7 @@ miic <- function(input_data,
       col <- as.character(state_order[row, "var_names"])
       if (state_order[row, "var_type"] == 0) {
         input_data[, col] <- factor(input_data[, col])
-        is_continuous[[col]] <- F
+        is_continuous[[col]] <- FALSE
       }
     }
   }
@@ -464,6 +472,7 @@ miic <- function(input_data,
         black_box = black_box,
         n_shuffles = n_shuffles,
         orientation = orientation,
+        ori_proba_ratio = ori_proba_ratio,
         propagation = propagation,
         conf_threshold = conf_threshold,
         verbose = verbose,
@@ -494,9 +503,49 @@ miic <- function(input_data,
       results = res,
       true_edges = true_edges,
       state_order = state_order,
+      consensus_threshold = consensus_threshold,
       verbose = verbose
     )
   }
 
-  res
+  class(res) <- "miic"
+  return(res)
+}
+
+
+#' Basic plot function of a miic network inference result
+#'
+#' @description This function calls \code{\link{miic.export}} to build a
+#' plottable object from the result returned by \code{\link{miic}} and plot it.
+#'
+#' @details See the documentation of \code{\link{miic.export}} for further
+#' details.
+#'
+#' @param x [a miic graph object]
+#' The graph object returned by \code{\link{miic}}.
+#' @param method A string representing the plotting method. Default to "igraph".
+#' Currently only "igraph" is supported.
+#' @param \dots Additional plotting parameters. See the corresponding plot function
+#' for the complete list.
+#' For igraph, see \code{\link[igraph]{igraph.plotting}}.
+#'
+#' @export
+#'
+#' @seealso \code{\link{miic.export}} for generic exports,
+#' \code{\link{getIgraph}} for igraph export,
+#' \code{\link[igraph]{igraph.plotting}}
+#'
+plot.miic = function(x, method = 'igraph', ...) {
+  if (class(x) != "miic"){
+    stop("Not a miic object.")
+  }
+  if (method == 'igraph'){
+    if (base::requireNamespace("igraph", quietly = TRUE)) {
+      igraph::plot.igraph(miic.export(x, 'igraph'), ...)
+    } else {
+      stop("Package 'igraph' is required.")
+    }
+  } else {
+    stop("Method not supported. See ?miic.export for supported methods.")
+  }
 }

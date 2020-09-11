@@ -1,13 +1,11 @@
 #include "utilities.h"
 
 #include <Rcpp.h>
-#include <sys/time.h>
-#include <unistd.h>
 
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include <fstream>
-#include <iostream>
+#include <sstream>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <string>
@@ -26,9 +24,7 @@
 namespace miic {
 namespace utility {
 
-using std::endl;
 using std::string;
-using std::stringstream;
 using std::vector;
 using namespace miic::computation;
 using namespace miic::structure;
@@ -133,15 +129,6 @@ double ramanujan(int n) {
   double N = n * log(1.0 * n) - n +
              log(1.0 * n * (1 + 4 * n * (1 + 2 * n))) / 6 + log(M_PI) / 2L;
   return N;
-}
-
-double get_wall_time() {
-  struct timeval time;
-  if (gettimeofday(&time, NULL)) {
-    // Handle error
-    return 0;
-  }
-  return (double)time.tv_sec + (double)time.tv_usec * .000001;
 }
 
 class sort_confidence {
@@ -284,9 +271,9 @@ string toNameString(const Environment& env, const vector<int>& vec) {
   if (vec.empty()) {
     return "NA";
   } else {
-    stringstream ss;
+    std::stringstream ss;
     std::transform(vec.begin(), vec.end() - 1,
-        std::ostream_iterator<std::string>(ss, ","),
+        std::ostream_iterator<string>(ss, ","),
         [&env](int i) { return env.nodes[i].name; });
     ss << env.nodes[vec.back()].name;
     return ss.str();
@@ -294,8 +281,6 @@ string toNameString(const Environment& env, const vector<int>& vec) {
 }
 
 vector<vector<string>> getEdgesInfoTable(const Environment& env) {
-  vector<vector<string>> table;
-
   vector<EdgeID> edge_list;
   for (int i = 0; i < env.n_nodes - 1; i++) {
     for (int j = i + 1; j < env.n_nodes; j++) {
@@ -304,7 +289,8 @@ vector<vector<string>> getEdgesInfoTable(const Environment& env) {
   }
   std::sort(edge_list.begin(), edge_list.end());
 
-  table.emplace_back(std::initializer_list<std::string>{"x", "y", "z.name",
+  vector<vector<string>> table;
+  table.emplace_back(std::initializer_list<string>{"x", "y", "z.name",
       "ai.vect", "zi.vect", "Ixy", "Ixy_ai", "cplx", "Rxyz_ai", "category",
       "Nxy_ai", "confidence"});
   for (const auto& edge : edge_list) {
@@ -315,7 +301,7 @@ vector<vector<string>> getEdgesInfoTable(const Environment& env) {
       confidence = exp(info->cplx - info->Ixy_ui) / info->exp_shuffle;
 
     using std::to_string;
-    table.emplace_back(std::initializer_list<std::string>{
+    table.emplace_back(std::initializer_list<string>{
         env.nodes[i].name,
         env.nodes[j].name,
         info->z_name_idx == -1
@@ -413,34 +399,45 @@ bool checkInterrupt(bool check /*=true*/) {
     return false;
 }
 
-int printProgress(double percentage, double startTime, int prg_numSearchMore) {
-  int pbwidth(40);
-  string pbstr = string(pbwidth, '|');
-  if (std::isnan(percentage) || std::isinf(percentage)) return 0;
-  int val = (int)(percentage * 100);
-  if (val != prg_numSearchMore) {
-    int lpad = (int)(percentage * pbwidth);
-    int rpad = pbwidth - lpad;
-    double remaining_time =
-        (get_wall_time() - startTime) / percentage * (1 - percentage);
-    stringstream sremaining_time;
-    if (std::isinf(remaining_time) || remaining_time < 0){
-      remaining_time = 0;
-    }
-    if (remaining_time > 60) {
-      int minutes = remaining_time / 60;
+TimePoint getLapStartTime() { return std::chrono::steady_clock::now(); }
+
+double getLapInterval(TimePoint start_time) {
+  using second = std::chrono::duration<double>;
+  return second(std::chrono::steady_clock::now() - start_time).count();
+}
+
+void printProgress(double percent, TimePoint start_time, int& percentile_prev) {
+  constexpr int bar_length_total{40};
+  if (std::isnan(percent) || std::isinf(percent) || percent < 0 || percent > 1)
+    return;
+  int percentile = static_cast<int>(percent * 100);
+  // Only update progress bar if the percentile has changed
+  if (percentile == percentile_prev) return;
+  percentile_prev = percentile;
+  int lpad = static_cast<int>(percent * bar_length_total);
+  int rpad = bar_length_total - lpad;
+  double sec_elapsed = getLapInterval(start_time);
+  double sec_remaining = sec_elapsed / percent * (1 - percent);
+  std::stringstream eta;
+  if (std::isinf(sec_remaining)) {
+    eta << "--";
+  } else {
+    if (sec_remaining > 60) {
+      int minutes = sec_remaining / 60;
       if (minutes > 60) {
         int hours = minutes / 60;
-        sremaining_time << hours << "h";
+        eta << hours << "h";
       }
-      sremaining_time << minutes % 60 << "m";
+      eta << minutes % 60 << "m";
     }
-    sremaining_time << int(remaining_time) % 60 << "s";
-    Rprintf("\r\t %3d%% [%.*s%*s] est. remaining time : %10s", val, lpad,
-        pbstr.c_str(), rpad, "", sremaining_time.str().c_str());
-    R_FlushConsole();
+    eta << static_cast<int>(sec_remaining) % 60 << "s";
   }
-  return val;
+  string lpad_str = string(bar_length_total, '=');
+  string rpad_str = ">" + string(bar_length_total - 1, '-');
+  // To stderr
+  REprintf("\r[%.*s%.*s] %3d%% eta: %-10s", lpad, lpad_str.c_str(), rpad,
+      rpad_str.c_str(), percentile, eta.str().c_str());
+  R_FlushConsole();
 }
 
 // Compute the distance to the kth nearest neigbhour of the given point in the
@@ -636,15 +633,6 @@ double compute_kl_divergence(const vector<int>& posArray,
     delete[] curr_sample_is_not_NA;
   }
   return kldiv;
-}
-
-int sign(double val) {
-  if (val < 0)
-    return -1;
-  else if (val > 0)
-    return 1;
-  else
-    return 0;
 }
 
 // Computes the Kullback-Leibler divergence between two joint (2D) distributions

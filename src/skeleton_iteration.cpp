@@ -18,6 +18,7 @@
 #include "utilities.h"
 
 using Rcpp::Rcout;
+using Rcpp::Rcerr;
 using std::endl;
 using std::vector;
 using namespace miic::computation;
@@ -77,10 +78,6 @@ bool firstStepIteration(Environment& environment, BCC& bcc) {
     }
   }
 
-  int threadnum = 0;
-  bool interrupt = false;
-  int prg_numSearchMore = -1;
-  Rcout << "First round of conditional independences :\n";
   if (environment.numSearchMore > 0) {
     if (environment.verbose)
       Rcout << "\n# -> searchMore edges, to get zi and noMore...\n";
@@ -103,10 +100,14 @@ bool firstStepIteration(Environment& environment, BCC& bcc) {
       Rcout << "SEARCH OF BEST Z: ";
     }
 
-    environment.exec_time.start_time_init = get_wall_time();
+    int threadnum = 0;
+    bool interrupt = false;
+    int progress_percentile = -1;
+    int n_jobs_done{0};
+    auto loop_start_time = getLapStartTime();
 #ifdef _OPENMP
-#pragma omp parallel for shared(interrupt) firstprivate(threadnum) \
-    schedule(dynamic)
+#pragma omp parallel for shared(interrupt, n_jobs_done) \
+    firstprivate(threadnum) schedule(dynamic)
 #endif
     for (int i = 0; i < environment.numSearchMore; i++) {
       if (interrupt) {
@@ -122,25 +123,23 @@ bool firstStepIteration(Environment& environment, BCC& bcc) {
       }
       int posX = environment.unsettled_list[i].i;
       int posY = environment.unsettled_list[i].j;
-      if (environment.verbose)
-        Rcout << "##  "
-             << "XY: " << environment.nodes[posX].name << " "
-             << environment.nodes[posY].name << "\n\n";
       if (environment.edges[posX][posY].shared_info->zi_list.size() > 0) {
         // Search for new contributing node and its rank
         SearchForNewContributingNodeAndItsRank(
             environment, posX, posY, environment.memoryThreads[threadnum]);
       }
-      // Dynamic thread allocation makes it so we can't know the end point of
-      // thread 0, on average it will be numSearchMore - n_threads/2
+#ifdef _OPENMP
+#pragma omp atomic
+      ++n_jobs_done;
+#endif
       if (threadnum == 0)
-        prg_numSearchMore = printProgress(
-            1.0 * i / (environment.numSearchMore - environment.n_threads / 2),
-            environment.exec_time.start_time_init, prg_numSearchMore);
+        printProgress(
+            static_cast<double>(n_jobs_done) / environment.numSearchMore,
+            loop_start_time, progress_percentile);
     }
     // Print finished progress bar
-    prg_numSearchMore = printProgress(
-        1.0, environment.exec_time.start_time_init, prg_numSearchMore);
+    printProgress(1.0, loop_start_time, progress_percentile);
+    Rcerr << '\n';
 
     if (interrupt) return false;
 
@@ -193,11 +192,10 @@ bool skeletonIteration(Environment& environment) {
   if (environment.verbose)
     Rcout << "Number of numSearchMore: " << environment.numSearchMore << endl;
 
-  Rcout << "\nSkeleton iteration :\n";
-  environment.exec_time.start_time_iter = get_wall_time();
+  auto loop_start_time = getLapStartTime();
   int start_numSearchMore = environment.numSearchMore;
 
-  int prg_numSearchMore = -1;
+  int progress_percentile = -1;
 
   while (environment.numSearchMore > 0) {
     if (checkInterrupt()) {
@@ -348,18 +346,17 @@ bool skeletonIteration(Environment& environment) {
               .shared_info->Rxyz_ui)
         max = i;
     }
-    prg_numSearchMore =
-        printProgress(1.0 * (start_numSearchMore - environment.numSearchMore) /
-                          (start_numSearchMore),
-            environment.exec_time.start_time_iter, prg_numSearchMore);
+    printProgress(1.0 * (start_numSearchMore - environment.numSearchMore) /
+                      (start_numSearchMore),
+        loop_start_time, progress_percentile);
   }
-  Rcout << "\n";
+  Rcerr << "\n";
   std::sort(
       environment.connected_list.begin(), environment.connected_list.end());
   return (true);
 }
 
-bool BCC::is_consistent(int x, int y, const vector<int>& vect_z) const {
+bool BCC::isConsistent(int x, int y, const vector<int>& vect_z) const {
   // For each node z in vect_z, check if
   // (1) z lies on a path between node x and node y, and
   // (2) z is a non-child of either x or y.

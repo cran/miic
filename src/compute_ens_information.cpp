@@ -22,8 +22,6 @@ namespace computation {
 
 using namespace miic::structure;
 using namespace miic::utility;
-using Rcpp::Rcout;
-using std::endl;
 using std::vector;
 
 // Computes the two point information X;Y|Ui and the three point information
@@ -370,7 +368,9 @@ double* computeEnsInformationContinuous(Environment& environment, int* myCond,
 
         // update res new, it will be compared to the continuous variables
         res_new[2] = res[6];
-        res_new[1] = posZi[int(res[3])];
+        if (res[3] >= 0) {
+          res_new[1] = posZi[int(res[3])];
+        }
         res_new[0] = res[0];
         delete[] res;
         delete[] posZi;
@@ -539,48 +539,22 @@ void SearchForNewContributingNodeAndItsRank(
         info->zi_list.size(), info->ui_list.size() + 2, posX, posY, argEnsInfo,
         m);
     if (vect[6] - info->Rxyz_ui > 0) {
-      if (environment.verbose) {
-        Rcout << "\n"
-             << posX << "    " << posY << "# -----> possible zi: "
-             << environment
-                    .nodes[environment.edges[posX][posY]
-                               .shared_info->zi_list[vect[3]]]
-                    .name
-             << "(" << vect[6] << " > " << info->Rxyz_ui << ")\n";
-      }
-
       // The order matters: set first the z.name.idx, than get the corresponding
       // zi from the original vect / Doing this way, we make sure that the
       // z.name has the right bin xyzi key
       info->z_name_idx = vect[3];
       info->Rxyz_ui = vect[6];
-
-    } else if (environment.verbose) {
-      Rcout << "# --!!--> Rxyz_ui.tmp = " << vect[6]
-           << " < Rxyz_ui = " << info->Rxyz_ui << "\n";
     }
-
   } else {
     vect = computeEnsInformationContinuous(environment, ui,
         info->ui_list.size(), zi, info->zi_list.size(),
         info->ui_list.size() + 2, posX, posY, argEnsInfo, m);
     if (vect[2] - info->Rxyz_ui > 0) {
-      if (environment.verbose) {
-        Rcout << "\n"
-             << posX << " " << posY << " # -----> possible zi: "
-             << environment.nodes[info->zi_list[vect[1]]].name << "(" << vect[2]
-             << " > " << info->Rxyz_ui << ")\n";
-      }
-
       // The order matters: set first the z.name.idx, than get the corresponding
       // zi from the original vect / Doing this way, we make sure
       // that the z.name has the right bin xyzi key
       info->z_name_idx = vect[1];
       info->Rxyz_ui = vect[2];
-
-    } else if (environment.verbose) {
-      Rcout << "# --!!--> Rxyz_ui.tmp = " << vect[2]
-           << " < Rxyz_ui = " << info->Rxyz_ui << "\n";
     }
   }
   delete[] vect;

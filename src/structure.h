@@ -113,6 +113,7 @@ struct Grid2d {
   size_t n_rows() const { return rows_; }
   size_t n_cols() const { return cols_; }
   size_t size() const { return data_.size(); }
+  bool empty() const { return data_.empty(); }
 
   auto begin() { return data_.begin(); }
   auto end() { return data_.end(); }
@@ -131,12 +132,12 @@ struct Grid2d {
 
 // Shifted conditional mutual information Nxy_ui * I(X;Y|ui) - k(X;Y|ui)
 struct InfoBlock {
-  int Nxy_ui;
-  double Ixy_ui;
-  double kxy_ui;
+  int n_samples;
+  double I;
+  double k;
 
-  constexpr InfoBlock(int N, double I, double k)
-      : Nxy_ui(N), Ixy_ui(I), kxy_ui(k) {}
+  constexpr InfoBlock() : n_samples(0), I(0), k(0) {}
+  constexpr InfoBlock(int N, double I, double k) : n_samples(N), I(I), k(k) {}
 };
 
 struct Info3PointBlock {
@@ -253,7 +254,18 @@ struct ExecutionTime {
   double getTotal() const { return init + iter + cut + ori; }
 };
 
+struct CutPointsInfo {
+  Grid2d<int> cutpoints;
+  double I{0};
+  double Ik{0};
+  double I_equal_freq_max{0};
+
+  CutPointsInfo() = default;
+  CutPointsInfo(size_t n_rows, size_t n_cols) : cutpoints(n_rows, n_cols, -1) {}
+};
+
 }  // namespace detail
+using detail::CutPointsInfo;
 using detail::Edge;
 using detail::EdgeID;
 using detail::EdgeSharedInfo;

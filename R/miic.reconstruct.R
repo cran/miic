@@ -1,11 +1,11 @@
 miic.reconstruct <- function(input_data = NULL,
                              is_continuous = NULL,
                              black_box = NULL,
-                             n_threads = n_threads,
+                             n_threads = 1,
                              n_eff = -1,
-                             cplx = c("nml", "mdl"),
+                             cplx = "nml",
                              eta = 1,
-                             latent = c("no", "yes", "orientation"),
+                             latent = "no",
                              n_shuffles = 0,
                              orientation = TRUE,
                              ori_proba_ratio = 1,
@@ -14,52 +14,39 @@ miic.reconstruct <- function(input_data = NULL,
                              verbose = FALSE,
                              sample_weights = NULL,
                              test_mar = TRUE,
-                             consistent = c(
-                               "no",
-                               "orientation",
-                               "skeleton"
-                             ),
-                             max_iteration = max_iteration
+                             consistent = "no",
+                             max_iteration = NULL
                              ) {
+  n_samples <- nrow(input_data)
+  n_nodes <- ncol(input_data)
   # Numeric factor matrix, level starts from 0, NA mapped to -1
   input_factor <- apply(input_data, 2, function(x)
                         (as.numeric(factor(x, levels = unique(x))) - 1))
   input_factor[is.na(input_factor)] <- -1
   max_level_list <- as.numeric(apply(input_factor, 2, max)) + 1
-  input_factor <- data.frame(t(input_factor))
-  # Data list, numeric for continuous columns, empty for others
-  input_double <- list()
+  input_factor <- as.vector(as.matrix(input_factor))
+  # Data list, numeric for continuous columns, -1 for discrete columns
+  input_double <- matrix(nrow = n_samples, ncol = n_nodes)
   # Order list, order(column) for continuous columns (index starting from 0, NA
-  # mapped to -1), empty for others
-  input_order <- list()
-  for (i in c(1:length(input_data))) {
+  # mapped to -1), -1 for discrete columns
+  input_order <- matrix(nrow = n_samples, ncol = n_nodes)
+  for (i in c(1:ncol(input_data))) {
     if (is_continuous[i]) {
-      input_double[[i]] <- as.numeric(input_data[, i])
+      input_double[, i] <- as.numeric(input_data[, i])
       n_NAs <- sum(is.na(input_data[, i]))
-      input_order[[i]] <- c(order(input_data[, i], na.last=NA) - 1,
+      input_order[, i] <- c(order(input_data[, i], na.last=NA) - 1,
                             rep_len(-1, n_NAs))
     } else {
-      input_double[[i]] <- numeric(0)
-      input_order[[i]] <- numeric(0)
+      input_double[, i] <- rep_len(-1, n_samples)
+      input_order[, i] <- rep_len(-1, n_samples)
     }
   }
+  input_order <- as.vector(input_order)
+  input_double <- as.vector(input_double)
 
   var_names <- colnames(input_data)
-  if (!is.null(black_box)) {
-    # transform var names to var indices
-    black_box[] <- sapply(black_box, function(x) {
-      match(as.character(x), colnames(input_data)) - 1 } )
-    black_box[] <- black_box[stats::complete.cases(black_box),]
-  } else {
-    black_box <- list()  # pass to cpp as empty vector
-  }
-
-  if (is.null(sample_weights)) {
-    sample_weights <- numeric(0)  # pass to cpp as empty vector<double>
-  }
 
   arg_list <- list(
-    "black_box" = black_box,
     "conf_threshold" = conf_threshold,
     "consistent" = consistent,
     "cplx" = cplx,
@@ -72,18 +59,30 @@ miic.reconstruct <- function(input_data = NULL,
     "levels" = max_level_list,
     "max_iteration" = max_iteration,
     "n_eff" = n_eff,
+    "n_nodes" = n_nodes,
+    "n_samples" = n_samples,
     "n_shuffles" = n_shuffles,
     "n_threads" = n_threads,
     "no_init_eta" = FALSE,
     "orientation" = orientation,
     "ori_proba_ratio" = ori_proba_ratio,
     "propagation" = propagation,
-    "sample_weights" = sample_weights,
     "test_mar" = test_mar,
     "max_bins" = 50,
     "var_names" = var_names,
     "verbose" = verbose
   )
+  if (!is.null(black_box)) {
+    # transform var names to var indices
+    black_box[] <- sapply(black_box, function(x) {
+      match(as.character(x), colnames(input_data)) - 1 } )
+    black_box[] <- black_box[stats::complete.cases(black_box),]
+    arg_list[["black_box"]] <- as.vector(as.matrix(t(black_box)))
+  }
+  if (!is.null(sample_weights)) {
+    arg_list[["sample_weights"]] <- sample_weights
+  }
+
   cpp_input <- list("factor" = input_factor, "double" = input_double,
                     "order" = input_order)
   # Call C++ function

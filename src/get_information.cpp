@@ -4,10 +4,11 @@
 #include <omp.h>
 #endif
 
+#include <algorithm>  // std::remove_if
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <limits>
-#include <tuple>
+#include <tuple>  // std::tie
 
 #include "computation_continuous.h"
 #include "computation_discrete.h"
@@ -145,8 +146,8 @@ double getInfo3PointOrScore(Environment& environment, int X, int Y, int Z,
 }
 
 InfoBlock getCondMutualInfo(int X, int Y, const vector<int>& ui_list,
-    const vector<vector<int>>& data_numeric,
-    const vector<vector<int>>& data_numeric_idx, Environment& environment) {
+    const Grid2d<int>& data_numeric, const Grid2d<int>& data_numeric_idx,
+    Environment& environment) {
   TempAllocatorScope scope;
   auto& cache = environment.cache.info_score;
 
@@ -223,13 +224,12 @@ void searchForBestContributingNode(
   auto info = environment.edges(X, Y).shared_info;
   auto& zi_list = info->zi_list;
   if (!environment.latent) {
+    auto is_isolated = [&environment, X, Y](int Z) {
+      return !environment.edges(X, Z).status && !environment.edges(Y, Z).status;
+    };
     // remove zi that is not connected to neither x nor y
-    zi_list.erase(std::remove_if(begin(zi_list), end(zi_list),
-                      [&environment, X, Y](int Z) {
-                        const auto& edges = environment.edges;
-                        return !edges(X, Z).status && !edges(Y, Z).status;
-                      }),
-        zi_list.end());
+    zi_list.erase(
+        remove_if(begin(zi_list), end(zi_list), is_isolated), end(zi_list));
   }
 
   int n_zi = zi_list.size();

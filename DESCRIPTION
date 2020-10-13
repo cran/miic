@@ -1,7 +1,7 @@
 Package: miic
 Title: Learning Causal or Non-Causal Graphical Models Using Information
         Theory
-Version: 1.5.2
+Version: 1.5.3
 Authors@R: 
     c(person(given = "Vincent",
              family = "Cabeli",
@@ -54,7 +54,7 @@ LazyData: true
 Encoding: UTF-8
 RoxygenNote: 7.1.1
 NeedsCompilation: yes
-Packaged: 2020-09-23 15:38:01 UTC; vcabeli
+Packaged: 2020-10-09 13:30:22 UTC; vcabeli
 Author: Vincent Cabeli [aut, cre],
   Honghao Li [aut],
   Marcel Ribeiro Dantas [aut],
@@ -64,4 +64,4 @@ Author: Vincent Cabeli [aut, cre],
   Hervé Isambert [aut]
 Maintainer: Vincent Cabeli <vincent.cabeli@curie.fr>
 Repository: CRAN
-Date/Publication: 2020-09-23 23:50:10 UTC
+Date/Publication: 2020-10-13 23:50:11 UTC

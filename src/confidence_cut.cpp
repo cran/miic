@@ -3,6 +3,7 @@
 #ifdef _OPENMP
 #include <omp.h>
 #endif
+#include <Rcpp.h>
 
 #include <algorithm>  // std::sort
 #include <set>
@@ -47,8 +48,8 @@ void setConfidence(Environment& environment) {
 #pragma omp parallel
 #endif
   {
-    vector<vector<int>> shuffled_data(environment.data_numeric);
-    vector<vector<int>> shuffled_data_idx(environment.data_numeric_idx);
+    Grid2d<int> shuffled_data(environment.data_numeric);
+    Grid2d<int> shuffled_data_idx(environment.data_numeric_idx);
     vector<int> indices(environment.n_samples);
 #ifdef _OPENMP
 #pragma omp for schedule(static)
@@ -61,13 +62,13 @@ void setConfidence(Environment& environment) {
         // random permutation
         rShuffle(begin(indices), end(indices));
         for (int row = 0; row < environment.n_samples; row++) {
-          shuffled_data[indices[row]][col] = environment.data_numeric[row][col];
+          shuffled_data(col, indices[row]) = environment.data_numeric(col, row);
           if (environment.is_continuous[col]) {
-            if (environment.data_numeric_idx[col][row] == -1)
-              shuffled_data_idx[col][row] = -1;
+            if (environment.data_numeric_idx(col, row) == -1)
+              shuffled_data_idx(col, row) = -1;
             else
-              shuffled_data_idx[col][row] =
-                  indices[environment.data_numeric_idx[col][row]];
+              shuffled_data_idx(col, row) =
+                  indices[environment.data_numeric_idx(col, row)];
           }
         }
       }
@@ -103,7 +104,7 @@ void confidenceCut(Environment& environment) {
   auto to_delete = [&environment](EdgeID& id) {
     int X = id.X, Y = id.Y;
     auto info = id.getEdge().shared_info;
-    double I_prime_original = info->Ixy_ui - info->cplx;
+    double I_prime_original = info->Ixy_ui - info->kxy_ui;
     // exp(I_shuffle - I_original)
     auto confidence = exp(-I_prime_original) / info->exp_shuffle;
     if (confidence > environment.conf_threshold) {

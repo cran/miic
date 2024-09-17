@@ -2,6 +2,7 @@
 #define MIIC_STRUCTURE_H_
 
 #include <functional>  // std::reference_wrapper
+#include <limits>      // std::numeric_limits
 #include <memory>      // std::shared_ptr
 #include <string>
 #include <type_traits>
@@ -133,32 +134,58 @@ struct Grid2d {
 
 // Shifted conditional mutual information Nxy_ui * I(X;Y|ui) - k(X;Y|ui)
 struct InfoBlock {
-  int n_samples;
+  double n_samples;  // double to include weighted case
   double I;
   double k;
 
   constexpr InfoBlock() : n_samples(0), I(0), k(0) {}
-  constexpr InfoBlock(int N, double I, double k) : n_samples(N), I(I), k(k) {}
+  constexpr InfoBlock(double N, double I, double k)
+      : n_samples(N), I(I), k(k) {}
 };
 
 struct Info3PointBlock {
   double score;
   double Ixyz_ui;
   double kxyz_ui;
+  // The two terms below are kept to facilitate the computation of contribution
+  // of each 3-point information in terms of reduction in mutual information.
+  // Ixyz_ui = Ixy_ui - Ixy_uiz
+  double Ixy_ui;
+  double kxy_ui;
 
-  constexpr Info3PointBlock(double R, double I, double k)
-      : score(R), Ixyz_ui(I), kxyz_ui(k) {}
+  constexpr Info3PointBlock()
+      : score(std::numeric_limits<double>::lowest()),
+        Ixyz_ui(0),
+        kxyz_ui(0),
+        Ixy_ui(0),
+        kxy_ui(0) {}
+  constexpr Info3PointBlock(
+      double R, double I3, double k3, double I2, double k2)
+      : score(R), Ixyz_ui(I3), kxyz_ui(k3), Ixy_ui(I2), kxy_ui(k2) {}
 };
 
 struct EdgeSharedInfo {
   // {ui}: indices of separating nodes
   vector<int> ui_list;
+  // The raw contribution of each ui to the conditional independence, measured
+  // by I'(X;Y;ui|{uj}) / I'(X;Y)
+  vector<double> raw_contributions;
+  // The contribution of each ui to the reduction of conditional mutual
+  // information, measured by I'(X;Y;ui|{uj}) / I'(X;Y|{uj})
+  vector<double> contributions;
   // {zi}: indices of candidate conditioning nodes
   vector<int> zi_list;
   // Best candidate separating node
   int top_z = -1;
-  // Score of the best contributor
+  // Score of the best contributor, this is the exponential part of the full
+  // score as defined in Verny et al., 2017 (Supplementary Text)
   double Rxyz_ui = 0;
+  // The raw contribution of top_z to the conditional independence, measured by
+  // I'(X;Y;top_z|{ui}) / I'(X;Y)
+  double top_raw_contribution = 0;
+  // The contribution of top_z to the reduction of conditional mutual
+  // information, measured by I'(X;Y;top_z|{ui}) / I'(X;Y|{ui})
+  double top_contribution = 0;
   // Conditional mutual information
   double Ixy_ui = 0;
   // Complexity with conditioning
@@ -181,7 +208,11 @@ struct EdgeSharedInfo {
   void reset() {
     zi_list.clear();
     ui_list.clear();
+    raw_contributions.clear();
+    contributions.clear();
     top_z = -1;
+    top_raw_contribution = 0;
+    top_contribution = 0;
     Rxyz_ui = 0;
     Ixy_ui = Ixy;
     kxy_ui = kxy;
@@ -212,9 +243,10 @@ struct Edge {
   // 0: not connected;
   // 1: tail (X *-- Y);
   // 2: head (X *-> Y);
-  short int status;       // Current status.
-  short int status_init;  // Status after initialization.
-  short int status_prev;  // Status in the previous iteration.
+  short int status{1};       // Current status.
+  short int status_init{1};  // Status after initialization.
+  short int status_prev{1};  // Status in the previous iteration.
+  double proba_head{0.5};    // Probability that the arrow tip is head (X *-> Y)
   std::shared_ptr<EdgeSharedInfo> shared_info;
 };
 
@@ -259,6 +291,7 @@ struct CutPointsInfo {
   double I{0};
   double Ik{0};
   double I_equal_freq_max{0};
+  int n_iterations{0};
 
   CutPointsInfo() = default;
   CutPointsInfo(size_t n_rows, size_t n_cols) : cutpoints(n_rows, n_cols, -1) {}

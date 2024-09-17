@@ -14,6 +14,7 @@
 #include "r_cpp_interface.h"
 #include "skeleton.h"
 #include "utilities.h"
+#include "tmiic.h"
 
 using Rcpp::_;
 using Rcpp::as;
@@ -45,7 +46,7 @@ List reconstruct(List input_data, List arg_list) {
 #ifdef _OPENMP
 #pragma omp parallel  // each thread has its own instance of li_alloc_ptr
 #endif
-  li_alloc_ptr = new LinearAllocator(li_alloc_size);
+  li_alloc_ptr = std::make_unique<LinearAllocator>(li_alloc_size);
 
   // Start reconstruction
   auto lap_start = getLapStartTime();
@@ -61,13 +62,23 @@ List reconstruct(List input_data, List arg_list) {
   int iter_count{0};
   bool is_consistent{false};
   do {
-    if (environment.consistent != 0) bcc.analyse();
+    if (environment.consistent != 0) {
+      // In temporal stationary mode, duplicate temporarily edges over history
+      // for the consistency assessment
+      if (environment.mode == 1)
+        tmiic::repeatEdgesOverHistory (environment);
+      bcc.analyse();
+      if (environment.mode == 1)
+        tmiic::dropPastEdges (environment);
+    }
     // Store current status in status_prev and revert to the structure at the
     // moment of initialization
     for (int i = 0; i < environment.n_nodes; i++) {
       for (int j = 0; j < environment.n_nodes; j++) {
-        environment.edges(i, j).status_prev = environment.edges(i, j).status;
-        environment.edges(i, j).status = environment.edges(i, j).status_init;
+        auto& edge = environment.edges(i, j);
+        edge.status_prev = edge.status;
+        edge.status = edge.status_init;
+        if (edge.status != 0) edge.proba_head = 0.5;
       }
     }
     lap_start = getLapStartTime();
@@ -93,12 +104,19 @@ List reconstruct(List input_data, List arg_list) {
             << " edges cut.\n";
       environment.exec_time.cut += getLapInterval(lap_start);
     }
-    // Oriente edges for non-consistent/orientation consistent algorithm
-    if (environment.orientation && !environment.connected_list.empty() &&
-        environment.consistent <= 1) {
+    if (environment.orientation && !environment.connected_list.empty()) {
       lap_start = getLapStartTime();
       Rcout << "Search for edge directions...\n";
+      //
+      // In temporal stationary mode, when latent variable discovery is activated,
+      // we temporarily duplicate edges over history assuming stationarity to
+      // correctly identify the possible unshielded triples for orientation
+      //
+      if ( (environment.mode == 1) && (environment.latent_orientation) )
+        tmiic::repeatEdgesOverHistory (environment);
       orientations = orientationProbability(environment);
+      if ( (environment.mode == 1) && (environment.latent_orientation) )
+          tmiic::dropPastEdges (environment);
       environment.exec_time.ori += getLapInterval(lap_start);
     }
     if (environment.consistent != 0)
@@ -115,54 +133,13 @@ List reconstruct(List input_data, List arg_list) {
     }
   } while (environment.consistent != 0);
 
-  int union_n_edges = 0;
-  for (int i = 1; i < environment.n_nodes; i++) {
-    for (int j = 0; j < i; j++) {
-      if (environment.edges(i, j).status) {
-        union_n_edges++;
-      }
-    }
-  }
-  // skeleton consistent algorithm
-  if (environment.consistent == 2 && union_n_edges > 0) {
-    lap_start = getLapStartTime();
-    orientations = orientationProbability(environment);
-    environment.exec_time.ori += getLapInterval(lap_start);
-    // Check inconsistency after orientation, add undirected edge to
-    // pairs with inconsistent conditional independence.
-    bcc.analyse();
-    int n_inconsistency = 0;
-    vector<std::pair<int, int>> inconsistent_edges;
-    for (int i = 1; i < environment.n_nodes; i++) {
-      for (int j = 0; j < i; j++) {
-        const Edge& edge = environment.edges(i, j);
-        if (edge.status || bcc.isConsistent(i, j, edge.shared_info->ui_list))
-          continue;
-        if (environment.verbose) {
-          Rcout << environment.nodes[i].name << ",\t"
-                << environment.nodes[j].name << "\t| "
-                << toNameString(environment.nodes, edge.shared_info->ui_list)
-                << std::endl;
-        }
-        inconsistent_edges.emplace_back(i, j);
-        ++n_inconsistency;
-      }
-    }
-    for (const auto& k : inconsistent_edges) {
-      environment.edges(k.first, k.second).status = 1;
-      environment.edges(k.second, k.first).status = 1;
-      environment.edges(k.first, k.second).shared_info->setUndirected();
-    }
-    Rcout << n_inconsistency << " inconsistent conditional independences"
-          << " found after orientation.\n";
-  }
-
   const auto& time = environment.exec_time;
   List result = List::create(
       _["adj_matrix"]        = getAdjMatrix(environment.edges),
+      _["proba_adj_matrix"]  = getProbaAdjMatrix(environment.edges),
       _["edges"]             = getEdgesInfoTable(environment.edges,
                                    environment.nodes),
-      _["orientations.prob"] = orientations,
+      _["triples"]           = orientations,
       _["time"]              = vector<double>{time.init, time.iter, time.cut,
                                    time.ori, time.getTotal()},
       _["interrupted"]       = false);
@@ -170,8 +147,9 @@ List reconstruct(List input_data, List arg_list) {
     int size = is_consistent ? cycle_tracker.getCycleSize()
                              : environment.max_iteration;
     result.push_back(cycle_tracker.getAdjMatrices(size), "adj_matrices");
+    result.push_back(
+        cycle_tracker.getProbaAdjMatrices(size), "proba_adj_matrices");
     result.push_back(is_consistent, "is_consistent");
   }
-  delete li_alloc_ptr;
   return result;
 }

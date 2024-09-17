@@ -1,21 +1,27 @@
 miic.reconstruct <- function(input_data = NULL,
+                             is_contextual = NULL,
+                             is_consequence = NULL,
                              is_continuous = NULL,
                              black_box = NULL,
                              n_threads = 1,
                              n_eff = -1,
                              cplx = "nml",
                              eta = 1,
-                             latent = "no",
+                             latent = "orientation",
                              n_shuffles = 0,
                              orientation = TRUE,
-                             ori_proba_ratio = 1,
-                             propagation = TRUE,
+                             ort_proba_ratio = 1,
+                             propagation = FALSE,
                              conf_threshold = 0,
                              verbose = FALSE,
                              sample_weights = NULL,
                              test_mar = TRUE,
                              consistent = "no",
-                             max_iteration = NULL
+                             max_iteration = NULL,
+                             mode = "S",
+                             n_layers = NULL,
+                             delta_t = NULL,
+                             negative_info = FALSE
                              ) {
   n_samples <- nrow(input_data)
   n_nodes <- ncol(input_data)
@@ -45,6 +51,7 @@ miic.reconstruct <- function(input_data = NULL,
   input_double <- as.vector(input_double)
 
   var_names <- colnames(input_data)
+  n_vars <- length (var_names)
 
   arg_list <- list(
     "conf_threshold" = conf_threshold,
@@ -65,10 +72,12 @@ miic.reconstruct <- function(input_data = NULL,
     "n_threads" = n_threads,
     "no_init_eta" = FALSE,
     "orientation" = orientation,
-    "ori_proba_ratio" = ori_proba_ratio,
+    "ort_proba_ratio" = ort_proba_ratio,
     "propagation" = propagation,
     "test_mar" = test_mar,
-    "max_bins" = 50,
+    "mode" = mode,
+    "negative_info" = negative_info,
+    "max_bins" = min(50, n_samples),
     "var_names" = var_names,
     "verbose" = verbose
   )
@@ -79,44 +88,86 @@ miic.reconstruct <- function(input_data = NULL,
     black_box[] <- black_box[stats::complete.cases(black_box),]
     arg_list[["black_box"]] <- as.vector(as.matrix(t(black_box)))
   }
-  if (!is.null(sample_weights)) {
+  if (!is.null(sample_weights))
     arg_list[["sample_weights"]] <- sample_weights
-  }
+  if (!is.null(is_contextual))
+    arg_list[["is_contextual"]] <- is_contextual
+  if (!is.null(is_consequence))
+    arg_list[["is_consequence"]] <- is_consequence
+  if (!is.null(n_layers))
+    arg_list[["n_layers"]] <- n_layers
+  if (!is.null(delta_t))
+    arg_list[["delta_t"]] <- delta_t
 
   cpp_input <- list("factor" = input_factor, "double" = input_double,
                     "order" = input_order)
   # Call C++ function
   res <- reconstruct(cpp_input, arg_list)
-  if (res$interrupted) {
+  if (res$interrupted)
     return(list(interrupted = TRUE))
-  }
 
   # R-formalize returned object
-  # table of edges infomation
+  #
+  # Table of edges information
+  #
   n_row <- length(res$edges) - 1
   header <- unlist(res$edges[1])
   df <- data.frame(matrix(unlist(res$edges[2:(n_row + 1)]), nrow = n_row,
                           byrow = TRUE), stringsAsFactors = FALSE)
   colnames(df) <- header
   df[df == "NA"] <- NA
-  df$Ixy <- as.numeric(df$Ixy)
-  df$Ixy_ai <- as.numeric(df$Ixy_ai)
+  df$i_xy <- as.numeric(df$i_xy)
+  df$i_xy_ai <- as.numeric(df$i_xy_ai)
   df$cplx <- as.numeric(df$cplx)
-  df$Rxyz_ai <- as.numeric(df$Rxyz_ai)
-  df$Nxy_ai <- as.numeric(df$Nxy_ai)
+  df$r_xyz_ai <- as.numeric(df$r_xyz_ai)
+  df$n_xy_ai <- as.numeric(df$n_xy_ai)
   df$confidence <- as.numeric(df$confidence)
   res$edges <- df
+  #
+  # Reshape items returned as list into their correct shape,
+  # add column/row names
+  #
+  res$adj_matrix <- matrix (unlist (res$adj_matrix),
+                            ncol=n_vars, nrow=n_vars, byrow=TRUE,
+                            dimnames=list (var_names, var_names) )
 
-  #  adj_matrix
-  res$adj_matrix <- matrix(unlist(res$adj_matrix), nrow = length(input_data), byrow = TRUE)
-  colnames(res$adj_matrix) <- var_names
-  rownames(res$adj_matrix) <- var_names
+  res$proba_adj_matrix <- matrix (unlist(res$proba_adj_matrix),
+                                  ncol=n_vars, nrow=n_vars, byrow=TRUE,
+                                  dimnames=list (var_names, var_names) )
+  #
+  # Same : reshape items returned when consistent parameter is turned on
+  #
+  if (length (res$adj_matrices) > 0)
+    {
+    tmp_reshape = list()
+    for (i in 1:length (res$adj_matrices) )
+      tmp_reshape[[i]] = matrix (unlist (res$adj_matrices[[i]]),
+                                 ncol=n_vars, nrow=n_vars, byrow=TRUE,
+                                 dimnames=list (var_names, var_names) )
+    res$adj_matrices = tmp_reshape
+    }
 
-  # adj_matrices (when consistent parameter is turned on)
-  if (length(res$adj_matrices) > 0) {
-    res$adj_matrices <- matrix(unlist(res$adj_matrices),
-                               ncol = length(res$adj_matrices))
-  }
+  if (length (res$proba_adj_matrices) > 0)
+    {
+    # First reshape with n_vars * n_vars rows, n_cycles columns to compute mean
+    #
+    tmp_reshape <- matrix (unlist (res$proba_adj_matrices),
+                           ncol=length(res$proba_adj_matrices))
+    tmp_reshape[tmp_reshape == -1] <- NA
+    adj_average <- rowMeans (tmp_reshape, na.rm = TRUE)
+    res$proba_adj_average <- matrix (unlist (adj_average),
+                                     ncol=n_vars, nrow=n_vars, byrow=TRUE,
+                                     dimnames=list (var_names, var_names) )
+    #
+    # Final reshape into a list of n_cycles items, each item is n_vars rows,
+    # n_vars columns matrix
+    #
+    res$proba_adj_matrices = list()
+    for (i in 1:ncol (tmp_reshape) )
+      res$proba_adj_matrices[[i]] = matrix (unlist (tmp_reshape[,i]),
+                                            ncol=n_vars, nrow=n_vars, byrow=TRUE,
+                                            dimnames=list (var_names, var_names) )
+    }
 
   # save time
   time <- strsplit(as.character(res$time), " ")
@@ -124,17 +175,17 @@ miic.reconstruct <- function(input_data = NULL,
 
   res$time <- stats::setNames(
     as.numeric(time),
-    c("init", "iter", "cut", "ori", "total")
+    c("init", "iter", "cut", "ort", "cpp")
   )
 
   # create the data frame of the structures after orientation
-  orientations_prob <- res$orientations.prob
+  orientations_prob <- res$triples
 
-  if (length(res$orientations.prob) > 0) {
+  if (length(res$triples) > 0) {
     a <- length(orientations_prob[[1]])
     b <- length(unlist(orientations_prob))
-    tmp <- unlist(res$orientations.prob)[1:a]
-    res1 <- unlist(res$orientations.prob)[(a + 1):b]
+    tmp <- unlist(res$triples)[1:a]
+    res1 <- unlist(res$triples)[(a + 1):b]
     orientations_prob <- data.frame(matrix(
       res1,
       nrow = length(orientations_prob) - 1,
@@ -149,7 +200,7 @@ miic.reconstruct <- function(input_data = NULL,
     orientations_prob[, c(8:9)] <- sapply(orientations_prob[, c(8:9)], as.numeric)
   }
   # update the returned matrix
-  res$orientations.prob <- orientations_prob
+  res$triples <- orientations_prob
 
   res$interrupted <- FALSE
 

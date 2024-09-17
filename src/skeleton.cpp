@@ -47,6 +47,8 @@ int initializeEdge(Environment& environment, int X, int Y) {
     environment.edges(Y, X).status = 0;
     environment.edges(X, Y).status_init = 0;
     environment.edges(Y, X).status_init = 0;
+    environment.edges(X, Y).proba_head = -1;
+    environment.edges(Y, X).proba_head = -1;
   } else {
     info->connected = 1;
     environment.edges(X, Y).status = 1;
@@ -61,7 +63,7 @@ int initializeEdge(Environment& environment, int X, int Y) {
 bool initializeSkeleton(Environment& environment) {
   auto& edges = environment.edges;
   bool interrupt{false};
-  auto t_last_check{getLapStartTime()};
+  auto t_last_check = getLapStartTime();
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -86,7 +88,10 @@ bool initializeSkeleton(Environment& environment) {
         edges(i, j).shared_info = std::make_shared<EdgeSharedInfo>();
         edges(j, i).shared_info = edges(i, j).shared_info;
 
-        if (edges(i, j).status) initializeEdge(environment, i, j);
+        if (edges(i, j).status)
+          initializeEdge(environment, i, j);
+        else
+          edges(i, j).shared_info->connected = 0;
       }
     }
   }  // omp parallel
@@ -114,7 +119,7 @@ bool setBestContributingNode(
   int progress_percentile{-1}, n_jobs_done{0};
   bool interrupt = false;
   auto loop_start_time = getLapStartTime();
-  auto t_last_check{loop_start_time};
+  auto t_last_check = loop_start_time;
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -181,7 +186,7 @@ bool searchForConditionalIndependence(Environment& environment) {
   int n_jobs_total = environment.unsettled_list.size();
   int progress_percentile = -1;
   auto loop_start_time = getLapStartTime();
-  auto t_last_check{loop_start_time};
+  auto t_last_check = loop_start_time;
   while (!environment.unsettled_list.empty()) {
     if (getLapInterval(t_last_check) > kMinCheckInterval) {
       t_last_check = getLapStartTime();
@@ -199,10 +204,14 @@ bool searchForConditionalIndependence(Environment& environment) {
 
     // move top z from zi_vect to ui_vect
     top_info->ui_list.push_back(top_info->top_z);
+    top_info->raw_contributions.push_back(top_info->top_raw_contribution);
+    top_info->contributions.push_back(top_info->top_contribution);
     top_info->zi_list.erase(remove(begin(top_info->zi_list),
                                 end(top_info->zi_list), top_info->top_z),
         end(top_info->zi_list));
     top_info->top_z = -1;
+    top_info->top_raw_contribution = 0;
+    top_info->top_contribution = 0;
 
     auto res = getCondMutualInfo(X, Y, top_info->ui_list,
         environment.data_numeric, environment.data_numeric_idx, environment);
@@ -225,6 +234,8 @@ bool searchForConditionalIndependence(Environment& environment) {
       unsettled_list.erase(it_max);
       environment.edges(X, Y).status = 0;
       environment.edges(Y, X).status = 0;
+      environment.edges(X, Y).proba_head = -1;
+      environment.edges(Y, X).proba_head = -1;
       top_info->connected = 0;
     } else {
       // Search for next candidate separating node

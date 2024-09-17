@@ -61,43 +61,19 @@ NULL
 NULL
 
 
-
-
-
-#' Tetraploidization in vertebrate evolution
+#' Covid cases
 #'
-#' 20,415 protein-coding genes in the human genome from Ensembl (v70) and information on the
-#' retention of duplicates originating either from the two whole genome duplications at
-#' the onset of vertebrates (‘ohnolog’) or from subsequent small scale duplications (‘SSD’)
-#' as well as copy number variants (‘CNV’).
+#' Demo dataset of chronological series to be used in temporal mode of miic.
+#' Evolution of Covid cases on a subset of EU countries from 12/31/2019 to 06/18/2020.
+#' Source of the data : European Centre for Disease Prevention and Control.
 #'
 #' @docType data
-#' @name ohno
-#' @usage data(ohno)
-#'
+#' @usage data(covidCases)
 #' @format A data.frame object.
-#'
 #' @keywords datasets
-#'
-#' @references Verny et al., PLoS Comp. Bio. 2017.
+#' @name covidCases
+#' @references ECDC (\href{https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide}{ECDC link})
 #'
 #' @keywords data
 NULL
 
-
-#' Tetraploidization in vertebrate evolution
-#'
-#' 20,415 protein-coding genes in the human genome from Ensembl (v70) and information on the
-#' retention of duplicates originating either from the two whole genome duplications at
-#' the onset of vertebrates (‘ohnolog’) or from subsequent small scale duplications (‘SSD’)
-#' as well as copy number variants (‘CNV’), category order.
-#'
-#' @docType data
-#' @usage data(ohno_stateOrder)
-#' @format A data.frame object.
-#' @keywords datasets
-#' @name ohno_stateOrder
-#' @references Verny et al., PLoS Comp. Bio. 2017.
-#'
-#' @keywords data
-NULL

@@ -29,9 +29,11 @@ namespace detail {
 using namespace structure;
 using namespace utility;
 using std::log;
+using std::lround;
+constexpr double kPrecision = 1.e-10;
 
-// rux 0:x,1;u,2:ux
-// cplx 0: MDL, 1: NML
+// rux: number of levels of each (joint) variable [x, u, ux]
+// cplx 0: BIC, 1: NML
 // flag (for cplx == 1 only) 0: mutual info, 1: conditional mutual info
 // When flag == 1 && cplx == 1, x and u are not symmetrical, x represents single
 // variable, whereas u represents joint variable (see def of cond mutual info)
@@ -39,7 +41,7 @@ template <typename Cx, typename Cu, typename Cux, typename Crux,
     typename = void_t<IsIntContainer<Cx>, IsIntContainer<Cu>,
         IsIntContainer<Cux>, IsIntContainer<Crux>>>
 InfoBlock computeMI(const Cx& xfactors, const Cu& ufactors,
-    const Cux& uxfactors, const Crux& rux, int n_eff,
+    const Cux& uxfactors, const Crux& rux, double n_eff,
     const TempVector<double>& sample_weights, std::shared_ptr<CtermCache> cache,
     int cplx, int flag) {
   TempAllocatorScope scope;
@@ -60,14 +62,14 @@ InfoBlock computeMI(const Cx& xfactors, const Cu& ufactors,
 
     Hx -= x * log(x);
     if (cplx == 1 && flag == 0)
-      sc += cache->getLogC(std::max(1, static_cast<int>(x + 0.5)), rux[1]);
+      sc += cache->getLogC(std::max((long)1, lround(x)), rux[1]);
   }
   for (const auto u : nu) {
     if (u <= 0) continue;
 
     Hu -= u * log(u);
     if (cplx == 1)
-      sc += cache->getLogC(std::max(1, static_cast<int>(u + 0.5)), rux[0]);
+      sc += cache->getLogC(std::max((long)1, lround(u)), rux[0]);
   }
   for (const auto ux : nux) {
     if (ux <= 0) continue;
@@ -77,15 +79,17 @@ InfoBlock computeMI(const Cx& xfactors, const Cu& ufactors,
 
   if (cplx == 1) {
     if (flag == 0) {
-      sc -= cache->getLogC(n_eff, rux[0]);
-      sc -= cache->getLogC(n_eff, rux[1]);
+      auto n_eff_long = lround(n_eff);
+      sc -= cache->getLogC(n_eff_long, rux[0]);
+      sc -= cache->getLogC(n_eff_long, rux[1]);
       sc *= 0.5;
     }
   } else {
     sc = 0.5 * log(n_eff) * (rux[0] - 1) * (rux[1] - 1);
   }
 
-  double Iux = n_eff * cache->getLog(n_eff) + (Hu + Hx - Hux);
+  double Iux = n_eff * log(n_eff) + (Hu + Hx - Hux);
+  if(rux[0] == 1 || rux[1] == 1 || Iux < kPrecision) Iux = 0; // The summed Iux may not be 0 due to precision issues
 
   return InfoBlock{n_eff, Iux, sc};
 }

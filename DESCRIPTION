@@ -1,12 +1,16 @@
 Package: miic
 Title: Learning Causal or Non-Causal Graphical Models Using Information
         Theory
-Version: 2.0.3
+Version: 2.0.4
 Authors@R: 
     c(person(given = "Franck",
              family = "Simon",
              role = c("aut", "cre"),
              email = "franck.simon@curie.fr"),
+      person(given = "Ali",
+             family = "Chemkhi",
+             role = "aut",
+             email = "ali.chemkhi@curie.fr"),
       person(given = "Tiziana",
              family = "Tocci",
              role = "aut",
@@ -82,10 +86,11 @@ Suggests: igraph, grDevices, ggplot2 (>= 3.3.0), gridExtra
 LinkingTo: Rcpp
 LazyData: true
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 NeedsCompilation: yes
-Packaged: 2024-09-17 15:35:57 UTC; Franck
+Packaged: 2026-09-14 12:18:41 UTC; Franck
 Author: Franck Simon [aut, cre],
+  Ali Chemkhi [aut],
   Tiziana Tocci [aut],
   Nikita Lagrange [aut],
   Orianne Debeaupuis [aut],
@@ -99,4 +104,4 @@ Author: Franck Simon [aut, cre],
   Hervé Isambert [aut]
 Maintainer: Franck Simon <franck.simon@curie.fr>
 Repository: CRAN
-Date/Publication: 2024-09-17 22:30:02 UTC
+Date/Publication: 2026-09-14 20:50:02 UTC
